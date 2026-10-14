@@ -3,8 +3,8 @@
   "id": "at365.wallpaper-slideshow",
   "name": "Applet.WallpaperSlideshow.at365",
   "displayName": "WallpaperSlideshow.at365",
-  "version": "0.4.6",
-  "minimumHostVersion": "0.26.30",
+  "version": "0.4.7",
+  "minimumHostVersion": "0.36.8",
   "startupDelaySeconds": 30,
   "updateRepository": "5ynonym/Applet.WallpaperSlideshow.at365",
   "runtime": "native",
@@ -139,13 +139,15 @@
       "maximum": 4096,
       "minimum": 0,
       "type": "number",
-      "key": "tileMargin", "automation": true,
+      "key": "tileMargin",
+      "automation": true,
       "title": "タイル間の余白（px）"
     },
     {
       "maximum": 1000,
       "title": "履歴件数（モニターごと）",
-      "key": "historyLimit", "automation": true,
+      "key": "historyLimit",
+      "automation": true,
       "type": "number",
       "description": "0で履歴を残しません。履歴は実行中だけ保持し、画像は表示ページだけ読み込みます。",
       "default": 30,
@@ -158,7 +160,8 @@
       "minimum": 1,
       "step": 1,
       "type": "number",
-      "key": "thumbnailWidth", "automation": true,
+      "key": "thumbnailWidth",
+      "automation": true,
       "title": "履歴サムネイルの幅（px）"
     },
     {
@@ -167,7 +170,8 @@
       "minimum": 1,
       "step": 1,
       "type": "number",
-      "key": "thumbnailHeight", "automation": true,
+      "key": "thumbnailHeight",
+      "automation": true,
       "title": "履歴サムネイルの高さ（px）"
     },
     {
@@ -176,11 +180,13 @@
       "minimum": 1,
       "step": 1,
       "type": "number",
-      "key": "maxFileNameLength", "automation": true,
+      "key": "maxFileNameLength",
+      "automation": true,
       "title": "履歴ファイル名の表示文字数"
     },
     {
-      "key": "historyPageSize", "automation": true,
+      "key": "historyPageSize",
+      "automation": true,
       "title": "最近使った壁紙の1ページの表示件数",
       "type": "number",
       "default": 4,
@@ -225,6 +231,50 @@
       "command": "at365.wallpaper-slideshow.background-settings",
       "description": "手動設定や設定結果の確認に使えます。",
       "successMessage": "Windowsの背景設定を開きました。"
+    }
+  ],
+  "settingSections": [
+    {
+      "id": "playback",
+      "title": "スライドショー",
+      "description": "壁紙の再生状態と切り替え間隔を設定します。",
+      "settings": [
+        "paused",
+        "intervalSeconds",
+        "tileMargin"
+      ]
+    },
+    {
+      "id": "monitors",
+      "title": "モニターと画像",
+      "description": "モニターごとに画像フォルダーと並べ方を設定します。",
+      "settings": [
+        "monitors"
+      ]
+    },
+    {
+      "id": "history",
+      "title": "履歴の表示",
+      "description": "残す履歴の件数と、最近使った壁紙の見た目を調整します。",
+      "settings": [
+        "historyLimit",
+        "historyPageSize",
+        "thumbnailWidth",
+        "thumbnailHeight",
+        "maxFileNameLength"
+      ],
+      "collapsible": true
+    },
+    {
+      "id": "windows",
+      "title": "Windowsの背景",
+      "description": "背景の表示方式を準備したり、Windowsの設定を開いたりできます。",
+      "settings": [],
+      "actions": [
+        "at365.wallpaper-slideshow.prepare-background",
+        "at365.wallpaper-slideshow.background-settings"
+      ],
+      "collapsible": true
     }
   ]
 }
