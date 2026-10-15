@@ -1,5 +1,19 @@
 # 検証記録
 
+## 2026-10-16: モニター一覧とフォーカス余白のコミット確認
+
+- 本体の共通編集テンプレートの余白修正に合わせ、`test-monitor-list-ui.cjs`へ入力のfocusと左右のoutline境界検査を追加。製品ソースと発行Applet0.4.8は実装時から同一。入力・依存・成功ログ・配布資産を照合してApplet8群/RPC/native smokeを再利用した。
+- 修正した最終AppDock0.46.0の固定EXEで[モニターGUI7群](.artifacts/monitor-list-ui-1792077765049/result.json)が成功。明暗/狭幅のフォーカス枠、64フォルダーと固定フッター、保存/取消/競合/並べ替えと両入口を確認。実壁紙を変更せず実Appletは無効のまま。source GUIのフォルダー選択はnative dialog応答のstub、固定EXEは手入力。
+- 本体の標準回帰485件（今回432件、照合再利用53件）とWeb一覧7群/AI16群も成功。Appletの再publishなし。ZIP/manifest/EXEのhashは前節と一致。[両repoのレビュー・再利用・検証証跡](../AppDock.at365/.artifacts/commit-validation-monitor-list-20261016/validation.json)を保存し、stage treeとcommitの一致を確認する。コミットのみで、push・Release・実利用先deployは未実施。
+
+## 2026-10-16: モニターごとの画像設定を共通一覧へ移行（0.4.8）
+
+- `monitors.list`で番号・画像ソースフォルダー・表示モード・タイル枚数の共通一覧を宣言。歯車から全項目をまとめて編集し、追加/編集はOK保存、取消では破棄、削除は確認、順序は共通ダイアログを使う。Applet独自フォームや保存フィールドは追加せず、既存の配列位置によるモニター割り当て・壁紙エンジンを保持。表示変更のパッチ0.4.8、共通番号列/フォルダー選択に必要な最低本体版0.46.0。
+- 発行前レビューと本体の関連15件が成功。当Appletの`dotnet run --project Applet.WallpaperSlideshow.RegressionTests -c Release`は**8群、終了0**。`scripts/test-protocol.cjs`のfixture RPC8群と発行native EXEの不正設定拒否・限定HWNDメッセージ・正常終了が成功。`.artifacts/monitor-list-20261015/regression.log`、`protocol.log`に記録。実デスクトップの壁紙変更は行っていない。
+- [最終固定EXEのモニターGUI7群](.artifacts/monitor-list-ui-1792076415525/result.json)で旧JSON文字列/Folder/数値Mode、入力検証と保存/取消、他項目保持、追加/削除/並べ替え、外部競合拒否、明暗/狭幅、設定と詳細の両入口、64フォルダー時の上限・スクロール・フッターを確認。実Appletは無効のまま、発行資産をそのまま隔離配置した。フォルダー選択の応答は[source GUI7群](.artifacts/monitor-list-ui-1792076265412/result.json)でstub、固定EXEでは手入力を使う。UI画像を目視し、本体共通フレームの重なりを修正後に最終確認した。
+- `publish.bat`終了0。manifest/feed/EXEは0.4.8、minimumHostVersionは0.46.0。EXE **51,747,236 bytes / SHA256 58001ffe720a9f561fea9d7d588c7057979e7c5940245188f614333b1605e67f**。個別ZIP **46,305,160 bytes / SHA256 9056b0dec619cdd3fe854db6f81cf9def07eac1badb31c9a80456216d05abb72**。ZIP2ファイルと配布フォルダー、GUIへ置いた実資産を照合。[ZIP記録](.artifacts/monitor-list-20261015/archive.json)と[両repoの入力・ログ・レビュー](../AppDock.at365/.artifacts/monitor-list-20261015/validation.json)を保存。
+- 初回portable inspector接続timeout、64件試験の描画待ち不足、旧フレームの画像は本体側の記録と合わせて保持。既存の全機能`test-ui.cjs`は旧inline/save UI用であり、今回の成功とは扱わない。現行一覧用の`test-monitor-list-ui.cjs`を追加。未コミット、push・Release・実利用先deploy・全体ZIPは未実施。
+
 ## 2026-10-14: 設定テンプレートの仕上げとコミット前検証
 
 - 標準回帰 **8群** が終了0。設定宣言と版以外の実行処理を変更していないこと、manifestの既存設定/コマンドを保持していることを再レビューし、未解決指摘なし。

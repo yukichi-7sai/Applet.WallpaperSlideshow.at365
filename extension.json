@@ -3,8 +3,8 @@
   "id": "at365.wallpaper-slideshow",
   "name": "Applet.WallpaperSlideshow.at365",
   "displayName": "WallpaperSlideshow.at365",
-  "version": "0.4.7",
-  "minimumHostVersion": "0.36.8",
+  "version": "0.4.8",
+  "minimumHostVersion": "0.46.0",
   "startupDelaySeconds": 30,
   "updateRepository": "5ynonym/Applet.WallpaperSlideshow.at365",
   "runtime": "native",
@@ -132,7 +132,13 @@
           "step": 1
         }
       ],
-      "itemTitle": "モニター"
+      "itemTitle": "モニター",
+      "list": {
+        "columns": ["Folders", "Mode", "TileCount"],
+        "titleKey": "Folders",
+        "showIndex": true,
+        "confirmDelete": true
+      }
     },
     {
       "default": 10,
