@@ -1,3 +1,4 @@
+const { getPublishDirectory } = require('../../AppDock.at365/scripts/publish-paths.cjs');
 const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -124,7 +125,7 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
 
 // Exercise the published native entry point, but reject settings before any desktop mutation.
 (async () => {
-  const exe = path.join(root, 'publish/Applet.WallpaperSlideshow.at365/Applet.WallpaperSlideshow.at365.exe');
+  const exe = path.join(getPublishDirectory(root), 'Applet.WallpaperSlideshow.at365/Applet.WallpaperSlideshow.at365.exe');
   if (!fs.existsSync(exe)) throw new Error('Publish the Applet before the native startup smoke.');
   const child = spawn(exe, [], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
   let diagnostics = ''; child.stderr.on('data', (data) => { diagnostics += data; });

@@ -1,3 +1,4 @@
+const { getPublishDirectory } = require('../../AppDock.at365/scripts/publish-paths.cjs');
 // Isolated native logging test. The real Applet rejects settings before desktop access.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -11,7 +12,7 @@ const host = path.resolve(root, '../AppDock.at365');
 const requireHost = createRequire(path.join(host, 'package.json'));
 const { chromium } = requireHost('playwright');
 const output = path.join(root, '.artifacts', `host-logging-${Date.now()}`);
-const portable = path.join(host, 'publish/AppDock.at365.exe');
+const portable = path.join(getPublishDirectory(host), 'AppDock.at365.exe');
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const checks = [];
 fs.mkdirSync(output, { recursive: true });
@@ -27,7 +28,7 @@ async function run(fixture) {
   const base = path.join(output, fixture ? 'fixture' : 'published');
   const extension = path.join(base, 'extensions/wallpaper');
   fs.mkdirSync(extension, { recursive: true });
-  fs.cpSync(path.join(root, fixture ? 'Applet.WallpaperSlideshow.RegressionTests/bin/Release/net10.0-windows' : 'publish/Applet.WallpaperSlideshow.at365'), extension, { recursive: true });
+  fs.cpSync((fixture ? path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/Release/net10.0-windows') : path.join(getPublishDirectory(root), 'Applet.WallpaperSlideshow.at365')), extension, { recursive: true });
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'extension.json'), 'utf8'));
   if (fixture) manifest.entry = 'Applet.WallpaperSlideshow.RegressionTests.exe';
   manifest.startupDelaySeconds = 0;

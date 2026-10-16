@@ -1,7 +1,9 @@
 ﻿param([string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $taskAppletRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$taskPublishDirectory = if ($OutputDirectory) { [System.IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $taskAppletRoot 'publish\Applet.WallpaperSlideshow.at365' }
+. ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\AppDock.at365\scripts\publish-paths.ps1')))
+$taskArtifact = Get-PublishDirectory $taskAppletRoot
+$taskPublishDirectory = if ($OutputDirectory) { [System.IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $taskArtifact 'Applet.WallpaperSlideshow.at365' }
 $taskManifest = Get-Content -LiteralPath (Join-Path $taskAppletRoot 'extension.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $taskProject = [xml](Get-Content -LiteralPath (Join-Path $taskAppletRoot 'Applet.WallpaperSlideshow\Applet.WallpaperSlideshow.csproj') -Raw)
 if ($taskManifest.version -ne $taskProject.Project.PropertyGroup.Version) { throw 'EXEとmanifestのバージョンが一致しません。' }
@@ -17,4 +19,6 @@ foreach ($taskSymbols in @('AppDock.Runtime.pdb', 'AppDock.SDK.pdb')) {
 Write-Output "Applet output: $taskPublishDirectory"
 
 $taskUpdateHostRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\AppDock.at365'))
-& (Join-Path $taskUpdateHostRoot 'scripts\pack-applet-update.ps1') -SourceDirectory $taskPublishDirectory -OutputDirectory (Join-Path (Split-Path $PSScriptRoot -Parent) 'publish')
+& (Join-Path $taskUpdateHostRoot 'scripts\pack-applet-update.ps1') -SourceDirectory $taskPublishDirectory -OutputDirectory $taskArtifact
+
+Install-PublishedDeployment $taskAppletRoot $taskArtifact

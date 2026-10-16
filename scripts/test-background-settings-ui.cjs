@@ -1,3 +1,4 @@
+const { getPublishDirectory } = require('../../AppDock.at365/scripts/publish-paths.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -25,7 +26,7 @@ let app;
     const env = { ...process.env, APPDOCK_WALLPAPER_FIXTURE: '1' };
     delete env.ELECTRON_RUN_AS_NODE;
     app = await electron.launch({
-      executablePath: process.env.APPDOCK_TEST_EXE || path.join(host, 'publish/win-unpacked/AppDock.at365.exe'),
+      executablePath: process.env.APPDOCK_TEST_EXE || path.join(getPublishDirectory(host), 'win-unpacked/AppDock.at365.exe'),
       args: [`--test-profile=${profile}`], env, timeout: 30000,
     });
     const page = await app.firstWindow();

@@ -1,3 +1,4 @@
+const { getPublishDirectory } = require('../../AppDock.at365/scripts/publish-paths.cjs');
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
@@ -9,7 +10,7 @@ const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('
 const profile = path.join(root, '.artifacts', `monitor-list-ui-${Date.now()}`);
 const applet = path.join(profile, 'extensions/wallpaper');
 fs.mkdirSync(applet, { recursive: true });
-fs.cpSync(path.join(root, 'publish/Applet.WallpaperSlideshow.at365'), applet, { recursive: true });
+fs.cpSync(path.join(getPublishDirectory(root), 'Applet.WallpaperSlideshow.at365'), applet, { recursive: true });
 if (!process.argv[2]) fs.copyFileSync(path.join(root, 'extension.json'), path.join(applet, 'extension.json'));
 const manifest = JSON.parse(fs.readFileSync(path.join(applet, 'extension.json'))), owner = manifest.id;
 const settings = require(path.join(hostRoot, 'out/main/shared/settings-schema')).createDefaultSettings();

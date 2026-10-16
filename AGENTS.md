@@ -2,7 +2,7 @@
 
 実装時のテスト選択、コミット前の必要回帰、リリース前のコミット/プッシュ確認と検証証跡の再利用は、[本体・Applet共通手順](../AppDock.at365/docs/development-workflow.md)に従います。この文書の試験コマンドは、その段階に応じて実行します。
 
-作業開始時は[A:入口](../../AGENTS.md)、[共通開発指示](../AGENTS.md)、[ホスト指示](../AppDock.at365/AGENTS.md)を確認する。実装したモジュールは版を更新して自身のpublishへ発行する。commit・公開・実利用先へのdeployは別指示。
+作業開始時は[A:入口](../../AGENTS.md)、[共通開発指示](../AGENTS.md)、[ホスト指示](../AppDock.at365/AGENTS.md)を確認する。実装したモジュールは版を更新して自身の40.ARTIFACT配下へ発行する。commit・公開・実利用先へのdeployは別指示。
 
 - 利用者向け仕様はREADME、開発手順はDEVELOPMENT、検証結果はVERIFICATIONへ分ける。
 - 0.4.1以降の生成BMP（windows-background.bmpを含む）は`%LOCALAPPDATA%/at365/Applets/WallpaperSlideshow`へ保存する。旧Roaming領域の自動移行・削除は行わない。Windowsが参照する生成BMPは終了時に無条件削除しない。
