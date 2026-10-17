@@ -8,6 +8,10 @@
 
 利用方法は[README.md](README.md)、実測結果と未確認事項は[VERIFICATION.md](VERIFICATION.md)を参照してください。
 
+## 設計文書
+
+- [デスクトップへのメモリ描画設計](docs/desktop-memory-rendering-design.md)：Windowsの壁紙設定を変更せず、合成画像をメモリから背面ウィンドウへ表示する方式への移行。設計のみ・未実装です。
+
 ## ビルド・発行・配置
 
 Windows、.NET 10 SDK、隣の`AppDock.at365`ソースが必要です。
