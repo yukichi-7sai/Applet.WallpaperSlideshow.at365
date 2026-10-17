@@ -35,6 +35,8 @@ Layered子ウィンドウを利用するため、EXEのapp.manifestでWindows 10
 
 DesktopHostは従来のWorkerW構成とProgman配下の背景構成を検出します。親のDPIコンテキストで非表示の子ウィンドウを生成し、物理画面矩形を親座標へ変換して配置します。Layered/Transparentにより入力を透過し、通常アプリの最前面への代替表示は行いません。画像更新とWM_PAINTだけで描画します。
 
+0.5.1では、各Surface専用の`BufferedGraphicsContext`で表示サイズの画像を完成させ、`Render`でDCへまとめて転送します。互換Bitmapは再利用し、描画ごとのpaint DCは保持せず、Surface終了時にバッファも解放します。`WM_PRINTCLIENT`も同じ描画経路を使います。`SetWindowPos`による表示・配置は初回だけとし、通常の画像交換では再配置せず、再描画を要求します。ちらつきの改善は実環境での目視確認を必要とします。
+
 接続先の破棄とTaskbarCreatedで表示先を取り直し、最大5回の間隔付き再接続を行います。停止中の遅延結果は表示しません。接続失敗は既存パネルとホストログへ表示し、「次の壁紙」で明示的に再試行できます。Windows背景設定への退避は行いません。旧prepare-backgroundコマンドは削除し、background-settingsは停止中に見えるWindows背景を確認する入口として維持します。
 
 通常回帰はfakeを使用します。`--inspect-desktop`は構成の読み取りだけ、`--desktop-smoke`は約1秒の実背面配置を行う明示的な試験です。`scripts/test-memory-native.cjs [EXE]`はEXEの固定コピーで実表示、切り替え、自身の表示HWNDを閉じた後の復旧、停止・再開、限定HWNDへの終了通知、Themesキャッシュの変更通知を確認します。利用者のExplorer本体・ロック・RDP・入力設定は操作しません。これらの成功と、実操作による互換性確認は区別します。

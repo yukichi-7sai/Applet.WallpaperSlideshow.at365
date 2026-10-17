@@ -1,5 +1,15 @@
 # 検証記録
 
+## 2026-10-18: 表示時のバッファリング（0.5.1）
+
+- 0.5.0の利用者コミット`0744076`を基点とし、DesktopHostだけを局所修正。Surface専用の`BufferedGraphicsContext`へ切り出し・拡縮を含む描画を完了してから`Render`でDCへ転送する。互換Bitmapを再利用し、paint DCを保持せず、Surface終了時にcontextも解放する。画像交換時の`SetWindowPos`は初回表示だけに限定した。画像所有権、停止/復旧、設定/保存形式・公開APIは維持。
+- 発行前レビューは[指摘なし](.artifacts/buffered-drawing-20261018/review.md)。設定項目・保存ファイル・互換性の変更がないためパッチ0.5.1、最低本体版0.46.0を維持。Releaseビルドは警告0/エラー0、標準回帰8群が成功。制限環境の初回ビルドは診断なしで失敗し、同じReleaseビルドを通常ユーザー権限で成功させた。初回ログも保持。
+- [固定した発行EXEの実試験](.artifacts/memory-native-1792261133074/result.json)が成功。2画面のピクセル出力、8回の手動切り替えとタイマー更新中のHWND/配置/DPI/入力透過style保持、自分の表示窓破棄後の再接続、停止・再開、限定HWNDへの終了通知と正常終了を確認。Themes変更通知0、背景レジストリとTranscodedWallpaperのhash・更新時刻を保持した。
+- KAGUYA / Windows build 26300 / .NET SDK 10.0.402 / Node 24.21.0。5120×2160と3840×2160、両方144dpi。短時間9サンプルのPrivate Bytesは初回202.1MiB・最終205.8MiB、GDIは主に23（一時25）。Surfaceごとの描画バッファ分が常駐する。長時間のリーク検証ではない。
+- `publish.bat`終了0。発行EXEは**51,753,922 bytes / SHA256 `6544cd3933b7f2a7f3ee107bce7e84de611e314b10252ad8f14120ceadeff9d8`**。更新ZIPは**46,311,269 bytes / SHA256 `e036aa2f879f677a82f729970692e3d1301ca469c8e3313ed9a572747b249d41`**。EXE/manifest/feedの0.5.1一致、ZIP内2ファイルのhash、配置ファイルの存在を照合。[入力・依存・コマンド・ログ・成果物の記録](.artifacts/buffered-drawing-20261018/validation.json)。
+- 利用者が0.5.1で、切り替え時のちらつきと上から描画過程が見える現象の両方が改善したことを目視確認し、2026-10-18に報告。これは利用者の実環境での確認であり、自動試験による再現・判定とは区別する。実入力、Explorer本体再起動、Win+D/仮想デスクトップ、ロック/RDP、混在DPI変更は未確認。変更外の本体全回帰、設定GUI、RPC/性能fixture全項目は再実行していない。
+- テストフォルダーはsource実行の成功1件、発行EXE実行の直近成功3件、以前の移行証跡・失敗/不明を保持し、削除候補なし。main上の実装・発行まで。コミット、push、Release、実利用先deployは未実施。
+
 ## 2026-10-18: デスクトップへのメモリ描画（0.5.0）
 
 - [設計](docs/desktop-memory-rendering-design.md)に沿い、合成BitmapをPresenterへ所有権移動してモニター別の背面ウィンドウへ表示する方式へ置換。表示用BMP保存、壁紙API、背景レジストリ書換え、Themesキャッシュ読取り、黒塗り終了処理を撤去した。旧ファイルは削除しない。`prepare-background`だけを廃止し、既存設定・paused生成ID・背景設定画面の起動は維持。

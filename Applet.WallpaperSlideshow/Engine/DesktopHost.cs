@@ -98,6 +98,7 @@ internal sealed class DesktopHost(Action<Action> post) : IDesktopHost
         private readonly Attachment target;
         private readonly Rectangle monitor;
         private readonly Action lost;
+        private readonly BufferedGraphicsContext buffers = new();
         private Bitmap? image;
         private Rectangle source;
         private bool closing;
@@ -148,7 +149,7 @@ internal sealed class DesktopHost(Action<Action> post) : IDesktopHost
 
         public void Display()
         {
-            if (Handle == 0 || !Native.SetWindowPos(Handle, target.Raised ? target.Icons : 0, 0, 0, 0, 0, 0x53))
+            if (Handle == 0 || (!displayed && !Native.SetWindowPos(Handle, target.Raised ? target.Icons : 0, 0, 0, 0, 0, 0x53)))
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "背面ウィンドウを表示できません。");
             if (!IsOrdered()) throw new InvalidOperationException("デスクトップの重なり順を確認できません。");
             displayed = true;
@@ -184,14 +185,20 @@ internal sealed class DesktopHost(Action<Action> post) : IDesktopHost
         private void Draw(nint dc)
         {
             if (dc == 0 || image == null || !Native.GetClientRect(Handle, out var client)) return;
-            using var graphics = Graphics.FromHdc(dc);
-            graphics.DrawImage(image, new Rectangle(0, 0, client.Right, client.Bottom), source, GraphicsUnit.Pixel);
+            var destination = new Rectangle(0, 0, client.Right, client.Bottom);
+            if (destination.Width <= 0 || destination.Height <= 0) return;
+            // Keep the compatible bitmap for this surface, but never retain a paint DC.
+            buffers.MaximumBuffer = destination.Size;
+            using var buffer = buffers.Allocate(dc, destination);
+            buffer.Graphics.DrawImage(image, destination, source, GraphicsUnit.Pixel);
+            buffer.Render(dc);
         }
 
         public void Dispose()
         {
             closing = true;
             if (Handle != 0) DestroyHandle();
+            buffers.Dispose();
             image = null;
         }
     }

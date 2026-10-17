@@ -56,9 +56,12 @@ async function until(fn, label) {
     for (let i = 0; i < 8; i++) {
       await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.next' });
       await new Promise(r => setTimeout(r, 350));
-      resourceSamples.push(surfaces(child.pid));
+      const sample = surfaces(child.pid);
+      assert.deepEqual(sample.windows, live.windows, 'Image replacement recreated or moved the desktop surfaces');
+      resourceSamples.push(sample);
     }
     await until(() => surfaces(child.pid).windows.length === settings.monitors.length, 'frame replacements');
+    checks.push('frame replacements preserve desktop HWNDs / placement / input styles');
     // Destroy only an HWND proven to belong to this isolated process; Explorer itself stays running.
     execFileSync(helper, ['--destroy-surface', String(child.pid), String(live.windows[0].handle)], { windowsHide: true });
     await until(() => panel?.facts.some(f => f.label === '状態' && f.value.includes('再接続待ち')), 'surface loss');
