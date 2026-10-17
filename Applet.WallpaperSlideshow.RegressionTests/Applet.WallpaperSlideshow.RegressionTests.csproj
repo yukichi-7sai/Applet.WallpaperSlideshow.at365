@@ -5,6 +5,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationManifest>../Applet.WallpaperSlideshow/app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../Applet.WallpaperSlideshow/Applet.WallpaperSlideshow.csproj" /></ItemGroup>
 </Project>

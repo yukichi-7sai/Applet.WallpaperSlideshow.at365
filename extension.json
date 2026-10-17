@@ -3,7 +3,7 @@
   "id": "at365.wallpaper-slideshow",
   "name": "Applet.WallpaperSlideshow.at365",
   "displayName": "WallpaperSlideshow.at365",
-  "version": "0.4.8",
+  "version": "0.5.0",
   "minimumHostVersion": "0.46.0",
   "startupDelaySeconds": 30,
   "updateRepository": "5ynonym/Applet.WallpaperSlideshow.at365",
@@ -134,7 +134,11 @@
       ],
       "itemTitle": "モニター",
       "list": {
-        "columns": ["Folders", "Mode", "TileCount"],
+        "columns": [
+          "Folders",
+          "Mode",
+          "TileCount"
+        ],
         "titleKey": "Folders",
         "showIndex": true,
         "confirmDelete": true
@@ -217,25 +221,15 @@
       "title": "壁紙のデータフォルダーを開く"
     },
     {
-      "id": "at365.wallpaper-slideshow.prepare-background",
-      "title": "Windowsの背景を「画像・スパン」に設定"
-    },
-    {
       "id": "at365.wallpaper-slideshow.background-settings",
       "title": "Windowsの背景設定を開く"
     }
   ],
   "settingActions": [
     {
-      "title": "Windowsの背景を「画像・スパン」に設定",
-      "command": "at365.wallpaper-slideshow.prepare-background",
-      "description": "このAppletは、Windowsの背景が「画像」、画像の調整が「スパン」の状態で使います。ボタンはWindowsへすぐに適用します。手動では Windows の「設定」→「個人用設定」→「背景」で、背景を「画像」、画像の調整を「スパン」にしてください。未保存のApplet設定や再生・停止状態は変更しません。",
-      "successMessage": "Windowsの背景を「画像・スパン」に設定しました。"
-    },
-    {
       "title": "Windowsの背景設定を開く",
       "command": "at365.wallpaper-slideshow.background-settings",
-      "description": "手動設定や設定結果の確認に使えます。",
+      "description": "停止中に見えるWindows側の背景を確認します。スライドショーの表示に画像・スパンの準備は不要です。",
       "successMessage": "Windowsの背景設定を開きました。"
     }
   ],
@@ -274,10 +268,9 @@
     {
       "id": "windows",
       "title": "Windowsの背景",
-      "description": "背景の表示方式を準備したり、Windowsの設定を開いたりできます。",
+      "description": "停止中に見えるWindows側の背景を確認できます。",
       "settings": [],
       "actions": [
-        "at365.wallpaper-slideshow.prepare-background",
         "at365.wallpaper-slideshow.background-settings"
       ],
       "collapsible": true

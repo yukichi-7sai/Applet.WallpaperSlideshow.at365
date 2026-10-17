@@ -37,7 +37,7 @@ internal static class PerformanceProbe
             });
             var watch = Stopwatch.StartNew();
             using (var result = (IDisposable)Type("WallpaperController").GetMethod("Render", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null,
-                [request, queues, CancellationToken.None, root])!) { }
+                originalAssembly is null ? [request, queues, CancellationToken.None] : [request, queues, CancellationToken.None, root])!) { }
             watch.Stop(); done.Cancel(); monitor.GetAwaiter().GetResult(); process.Refresh();
             Console.WriteLine(JsonSerializer.Serialize(new { engine = originalAssembly is null ? "applet" : "original", images = 16,
                 sourceSize = "2560x1440", screenSize = "1920x1080", baselinePrivateMiB = Math.Round(baseline / 1048576d, 1),

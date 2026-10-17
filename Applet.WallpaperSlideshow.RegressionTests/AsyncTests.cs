@@ -76,7 +76,6 @@ internal static class AsyncTests
             "Failed UI dispatch leaked result");
         RenderScreens(directory);
         UiDispatch();
-        ProcessExitCleanup(directory);
         Console.WriteLine("PASS: serialized background work, coalescing, stale output, pause/shutdown, dispatch failure, multi-monitor render");
     }
 
@@ -96,16 +95,15 @@ internal static class AsyncTests
         queues.ReplaceQueues(QueueManager.Prepare(config, 2));
         var request = new WallpaperController.RenderRequest(config,
             [new Rectangle(-20, 0, 20, 20), new Rectangle(0, 0, 20, 20)], 1);
-        string path;
-        using (var output = WallpaperController.Render(request, queues, default, root))
+        var existingFiles = Directory.GetFiles(root, "*", SearchOption.AllDirectories).Order().ToArray();
+        using (var output = WallpaperController.Render(request, queues, default))
         {
-            path = output.Path;
-            using var bitmap = new Bitmap(path);
+            var bitmap = output.Image;
             Check(bitmap.Width == 40 && bitmap.GetPixel(10, 10).R > 200 &&
                 bitmap.GetPixel(30, 10).ToArgb() == Color.Black.ToArgb(), "Monitor bounds/clip were not preserved");
             Check(output.History.Count == 1, "History does not match rendered images");
         }
-        Check(!File.Exists(path), "Rendered file leaked");
+        Check(existingFiles.SequenceEqual(Directory.GetFiles(root, "*", SearchOption.AllDirectories).Order()), "Render wrote a file");
         using (var thumbnail = ThumbnailResult.Load(imagePath, new Size(15, 15), default))
         {
             Check(thumbnail.Image?.Size == new Size(15, 5) && thumbnail.Resolution == "60×20", "Thumbnail result incorrect");
@@ -117,28 +115,10 @@ internal static class AsyncTests
         cancellation.Cancel();
         try
         {
-            using var unexpected = WallpaperController.Render(request, queues, cancellation.Token, root);
+            using var unexpected = WallpaperController.Render(request, queues, cancellation.Token);
             throw new Exception("Cancelled render completed");
         }
         catch (OperationCanceledException) { }
-    }
-
-    private static void ProcessExitCleanup(string root)
-    {
-        var output = Path.Combine(root, "exit-test.bmp");
-        var start = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };
-        if (string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), "dotnet", StringComparison.OrdinalIgnoreCase))
-            start.ArgumentList.Add(typeof(AsyncTests).Assembly.Location);
-        start.ArgumentList.Add("--temporary-exit");
-        start.ArgumentList.Add(output);
-        using var process = System.Diagnostics.Process.Start(start)!;
-        if (!process.WaitForExit(5000))
-        {
-            process.Kill();
-            process.WaitForExit();
-            throw new Exception("ProcessExit cleanup test timed out");
-        }
-        Check(process.ExitCode == 0 && !File.Exists(output), "ProcessExit left an unfinished BMP");
     }
 
     private static void UiDispatch()

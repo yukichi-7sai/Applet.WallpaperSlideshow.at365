@@ -69,34 +69,27 @@ internal static class SessionShutdownTests
         var form = DispatcherForm.Instance;
         _ = form.Handle;
         int cleanups = 0;
-        int desktopCalls = 0;
+        var host = new DesktopTests.FakeHost();
+        using var presenter = new DesktopPresenter(host, DesktopPresenter.ScheduleOnUi, error => throw error);
         try
         {
             if (!GetProcessShutdownParameters(out var level, out _) || level != 0x2ff) throw new Exception("Native Applet must clean up before the host's default level");
-            using (var image = new Bitmap(12, 8)) {
-                using (var graphics = Graphics.FromImage(image)) graphics.Clear(Color.Red);
-                image.Save(Const.WallpaperPicturePath);
-            }
+            presenter.Resume([new Rectangle(0, 0, 12, 8)]);
+            using var frame = DesktopTests.Frame(Color.Red, [new Rectangle(0, 0, 12, 8)]);
+            presenter.Present(frame);
             form.OnSessionEnding = () => {
                 cleanups++;
-                WallpaperController.ClearWallpaper(path => {
-                    desktopCalls++;
-                    using var black = new Bitmap(Const.WallpaperPicturePath);
-                    if (path != string.Empty || black.Size != new Size(1, 1) || black.GetPixel(0, 0).ToArgb() != Color.Black.ToArgb())
-                        throw new Exception("Cleanup returned before clearing the generated BMP");
-                });
+                presenter.Pause();
             };
             Send(Environment.ProcessId.ToString(), form.Handle.ToInt64().ToString(), "query");
             Send(Environment.ProcessId.ToString(), form.Handle.ToInt64().ToString(), "cancel");
-            if (cleanups != 0) throw new Exception("Cancelled session stopped playback");
+            if (cleanups != 0 || !presenter.HasImage) throw new Exception("Cancelled session stopped playback");
             Send(Environment.ProcessId.ToString(), form.Handle.ToInt64().ToString(), "end");
-            using (var black = new Bitmap(Const.WallpaperPicturePath)) {
-                if (cleanups != 1 || desktopCalls != 1 || black.Size != new Size(1, 1) || black.GetPixel(0, 0).ToArgb() != Color.Black.ToArgb())
-                    throw new Exception("WM_ENDSESSION did not synchronously clean up");
-            }
+            if (cleanups != 1 || presenter.HasImage || host.Connections[0].Disposals != 1)
+                throw new Exception("WM_ENDSESSION did not synchronously release memory and surfaces");
             Send(Environment.ProcessId.ToString(), form.Handle.ToInt64().ToString(), "logoff");
             if (cleanups != 2) throw new Exception("Logoff did not use the same cleanup");
-            Console.WriteLine("PASS: real hidden HWND / shutdown priority / query and cancellation / confirmed shutdown and logoff / synchronous black BMP cleanup with fake desktop API");
+            Console.WriteLine("PASS: real hidden HWND / shutdown priority / query and cancellation / confirmed shutdown and logoff / synchronous memory and surface cleanup with fake desktop");
         }
         finally {
             form.OnSessionEnding = null;

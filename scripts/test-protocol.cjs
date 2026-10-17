@@ -30,19 +30,18 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
   try {
     const result = await peer.request('activate', { id: 'at365.wallpaper-slideshow', settings });
     assert.equal(result.tray.length, 0);
-    assert.equal(result.commands.length, 8);
+    assert.equal(result.commands.length, 7);
     assert(!result.commands.some(c => /\.(start|stop|toggle|resume)$/.test(c.id)));
     assert.equal(result.commands.some(command => command.id.endsWith('.resume')), false);
     assert(result.commands.some(c=>c.id==='at365.wallpaper-slideshow.next'));
     assert.deepEqual(panel.actions.slice(0,3).map(a=>a.command), ['off','on','toggle'].map(a=>'at365.wallpaper-slideshow.settings.paused.'+a));
     assert.deepEqual(panel.actions.slice(0, 4).map((action) => action.title), ['開始／再開', '停止', '開始／停止を切り替え', '次の壁紙に更新']);
-    assert.equal(panel.facts.find((fact) => fact.label === '状態').value, '再生中');
+    assert.equal(panel.facts.find((fact) => fact.label === '状態').value, '表示中');
     await setPause(true);
     assert.equal(settings.paused, true);
-    await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.prepare-background' });
-    assert.equal(settings.paused, true, 'background preparation preserves manual pause');
-    await assert.rejects(peer.request('command.execute', { id: 'at365.wallpaper-slideshow.prepare-background' }), /fixture background failure/);
-    assert.equal(settings.paused, true, 'failed background preparation preserves manual pause');
+    assert(!result.commands.some(c => c.id.endsWith('.prepare-background')), 'wallpaper-changing command removed');
+    await assert.rejects(peer.request('command.execute', { id: 'at365.wallpaper-slideshow.prepare-background' }));
+    assert.equal(settings.paused, true, 'obsolete command cannot affect playback');
     await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.background-settings' });
     assert.equal(settings.paused, true);
     await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.next' });
@@ -73,7 +72,7 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
     assert.match(panel.facts.find((fact) => fact.label === '状態').value, /停止中/);
     await setPause(false);
     assert.equal(settings.paused, false);
-    assert.equal(panel.facts.find((fact) => fact.label === '状態').value, '再生中');
+    assert.equal(panel.facts.find((fact) => fact.label === '状態').value, '表示中');
     await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.history' });
     assert.equal(panel.images.length, 4); assert(panel.images.every(image => fs.existsSync(image.imageFile)));
     assert.match(panel.images[0].title, /image6/);
@@ -108,7 +107,7 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
     assert.equal(panel.images, null);
     await peer.request('deactivate'); deactivated = true;
     assert.equal(logs.filter(entry => entry.message.includes('[画像サイズ:')).length, 1, 'engine errors use host logging with duplicate suppression');
-    assert(logs.some(entry => entry.message.includes('[Windowsの背景設定]') && entry.message.includes('fixture background failure')));
+    assert(!logs.some(entry => entry.message.includes('[Windowsの背景設定]')), 'obsolete background mutation is not executed');
     assert.equal(logs.filter(entry => entry.message.includes('[AppDock設定の反映]')).length, 1, 'settings error has one common log entry');
     assert(logs.some(entry => entry.message.includes('[fixture shutdown]')), 'cleanup logs flushed before deactivation completes');
     assert(logs.every(entry => entry.level === 'error'));

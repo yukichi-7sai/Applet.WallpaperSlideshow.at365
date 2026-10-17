@@ -1,5 +1,19 @@
 # 検証記録
 
+## 2026-10-18: デスクトップへのメモリ描画（0.5.0）
+
+- [設計](docs/desktop-memory-rendering-design.md)に沿い、合成BitmapをPresenterへ所有権移動してモニター別の背面ウィンドウへ表示する方式へ置換。表示用BMP保存、壁紙API、背景レジストリ書換え、Themesキャッシュ読取り、黒塗り終了処理を撤去した。旧ファイルは削除しない。`prepare-background`だけを廃止し、既存設定・paused生成ID・背景設定画面の起動は維持。
+- 発行前に実装差分・所有権・停止/復旧・保存境界・公開操作・関連試験をレビューした。[レビュー記録](.artifacts/memory-desktop-20261018/review.md)。EXEのWindows互換宣言不足を実apphostで再現し、app.manifest追加で修正。解放順序、WinEventの対象判定、重なり順と描画例外処理も確認・補強した。保存仕様/公開操作の廃止により0.4.8→0.5.0、最低ホスト版0.46.0は維持。
+- .NET 10 Releaseビルドは警告0/エラー0。標準回帰8群、RPCの設定/履歴/削除/コマンド/ログ/EOF、実hidden HWNDを限定した終了取消・終了確定・ログオフ・二重停止防止、性能fixtureが成功。通常回帰とRPC fixtureはfake接続先で、実壁紙やExplorerへ接続しない。
+- AppDock 0.56.0の固定EXE＋native fixtureで設定GUI4群が成功。背景変更ボタンの撤去、保持した設定画面の起動、即時保存と手動停止維持、通常/狭幅を確認。[結果とスクリーンショット](.artifacts/memory-settings-ui-1792258437513/result.json)。初期の試験失敗は折りたたみsummaryを開いていない旧selectorを修正したもので、製品UI変更は不要だった。
+- 発行EXEの固定コピーで、KAGUYA / Windows 11 build 26300のProgman配下の構成、5120×2160＋3840×2160（両144dpi）への配置と赤画像の実描画ピクセルを確認。切り替え、自プロセスの表示HWNDだけを閉じた後の再接続、手動停止・再開、限定HWNDへの終了通知と正常終了が成功。[実native結果](.artifacts/memory-native-1792259210035/result.json)。Explorer本体は再起動していない。
+- 同試験で壁紙レジストリ値とTranscodedWallpaperのSHA256/更新時刻を保持し、Themesの対象ファイル変更通知は0件だった。通常コードに壁紙変更APIや表示画像の保存が残っていないことも照合した。ファイル変更通知と状態比較による確認であり、ETWによる全I/Oバイト計測ではない。履歴サムネイルとホストの設定/ログ保存は既存仕様どおり。
+- 短時間の連続切り替え9標本でGDIオブジェクトは21～21、USERオブジェクトは26～28、Private Bytesは初回128.1MiB/最終131.1MiB。長時間リーク試験とは区別する。別の16画像/1920×1080の性能fixtureでは合成151ms、追加ピーク22.2MiB。[性能ログ](.artifacts/memory-desktop-20261018/final-performance.log)。
+- `publish.bat`成功。発行先は`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`。EXE 51,753,782 bytes / SHA256 `435659b5b0426ecc8deb72b7cc0d7c8ecf9e651efc98416ead69d5206e5c96ba`。update.zip 46,310,996 bytes / SHA256 `548c6b5fbde611fa92970d79bd50496cfb897f9ce152d96b5ed3212ff424ea8b`。EXE/manifest/feedの0.5.0一致、ZIP内2ファイルと発行物の全hash、配置スクリプトの存在を確認。発行EXEの不正設定拒否・共通ログ・終了通知・正常終了も成功。本体や他Appletの再発行、全体ZIP作成は行っていない。
+- [検証一覧・入力/ログ/成果物のhash](.artifacts/memory-desktop-20261018/validation.json)。初回ビルドと実デスクトップ接続は制限環境で失敗し、同じ処理を通常ユーザー実行で切り分けた。初期native生成失敗、透明だった試験画像と廃止済みコマンドの旧期待値などの失敗記録も保持し、修正後の成功ログを区別した。
+- 未確認: 物理入力でのアイコン/背景メニュー/ドラッグ、Win+D、仮想デスクトップ切替、Explorer本体の再起動、実ロック/RDP・実OS終了、混在DPI変更、Windows 10の従来WorkerW構成。変更外の本体全回帰・モニター編集専用GUIは未実行。fixtureと実HWNDの成功をこれらの実操作の成功へ読み替えない。
+- main上の実装・発行まで。コミット、push、GitHub Release、実利用先へのdeployは未実施。
+
 ## 2026-10-16: モニター一覧とフォーカス余白のコミット確認
 
 - 本体の共通編集テンプレートの余白修正に合わせ、`test-monitor-list-ui.cjs`へ入力のfocusと左右のoutline境界検査を追加。製品ソースと発行Applet0.4.8は実装時から同一。入力・依存・成功ログ・配布資産を照合してApplet8群/RPC/native smokeを再利用した。

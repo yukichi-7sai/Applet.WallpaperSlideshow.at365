@@ -1,6 +1,6 @@
 # デスクトップへのメモリ描画設計
 
-2026-10-17 / 設計のみ・未実装。調査対象はmainの0.4.8。現行仕様は[開発ガイド](../DEVELOPMENT.md)を参照。
+2026-10-18 / 0.5.0で実装。調査起点はmainの0.4.8。現行仕様は[開発ガイド](../DEVELOPMENT.md)、検証範囲と未確認事項は[検証記録](../VERIFICATION.md)を参照。
 
 ## 1. 目的と採用方針
 
@@ -36,12 +36,14 @@ flowchart LR
 
 `Progman` / `WorkerW` / `SHELLDLL_DefView`を探索し、アイコンより後ろ、Windowsの背景より前へ自前ウィンドウを配置する。従来のWorkerW構成と、Progman配下にアイコンと背景が分かれる構成を実際の親子関係から判別する。必要なデスクトップ層の生成要求は`SendMessageTimeout`で時間制限を設ける。
 
+Layered子ウィンドウを利用するため、製品と回帰fixtureのEXEはapp.manifestでWindows 10/11対応を宣言する。dotnet.exe経由だけでなく実apphost・発行EXEを検証する。[Windowsの要件](https://learn.microsoft.com/en-us/windows/win32/winmsg/using-windows)
+
 この配置方法はExplorer内部の構成に依存する。Livelyの[実装例](https://github.com/lively-community/lively/blob/core-separation/src/Lively/Lively/Core/WinDesktopCore.cs)を挙動の参考とし、全Windows版で同じ階層が存在するとは扱わない。まず最小試作で接続・入力・DPIを確認し、対応できたOSビルドを検証記録へ残す。
 
 - 自前ウィンドウは枠なし・非アクティブ・タスクバー/Alt+Tab非表示とする。一般ウィンドウの最前面表示への退避や、Explorer既存ウィンドウの非表示・破棄は行わない。
 - `WS_EX_LAYERED`と`WS_EX_TRANSPARENT`による入力透過を基本に、不透明度255で画像を表示する。アイコンのクリック、空白の右クリック、範囲選択、ドラッグ、ホイールがExplorerへ届くことを実機で確認する。独自の入力フックや`SendInput`による転送は追加しない。[Layered Windowsの仕様](https://learn.microsoft.com/en-us/windows/win32/winmsg/window-features#layered-windows)
 - 画面の物理ピクセル矩形と親ウィンドウの座標を明示的に変換する。負の座標、縦置き、隙間、混在DPIを扱い、WinFormsの自動拡縮を重ねない。
-- 現行のPerMonitorV2設定を起点に、接続先のDPIコンテキストとSurface生成時のコンテキストを整合させる。`SetParent`のスタイル変更とDPI不一致の制約を確認し、プロセス全体のDPIモードを暗黙に変える実装にしない。具体的な生成手順は最小試作の結果で確定する。[SetParentの仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setparent)
+- 現行のPerMonitorV2設定を起点に、接続先のDPIコンテキストとSurface生成時のコンテキストを整合させる。`SetParent`のスタイル変更とDPI不一致の制約を確認し、プロセス全体のDPIモードを暗黙に変える実装にしない。親のDPIコンテキストへ一時的に切り替えてNativeWindowを生成し、元のスレッドコンテキストへ戻す。親を指定して生成するためSetParent自体は使わない。[SetParentの仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setparent)
 
 親・アイコン層・重なり順を確認できるまでは非表示にし、安全に配置できたSurfaceだけを表示する。画面構成やDPIが変わったら古い合成要求を無効化し、矩形・接続先を取り直して再合成する。
 
@@ -78,7 +80,7 @@ Surfaceを隠した後に見えるのは、その時点でWindowsに設定され
 | 既存コマンド・設定 | `paused`の生成ID、`next`、履歴、`data`を維持。`background-settings`はOS側の背景を確認する入口としてIDとボタンを維持し、スパン必須の案内を削除 |
 | 既存の保存物 | 旧BMP・旧Roaming領域・WindowsのThemesキャッシュを移動・削除しない。`data`の明示操作は従来フォルダーを開く。通常再生のために旧フォルダーを作成しない |
 
-`README`・`DEVELOPMENT`・`AGENTS`の現行背景処理の説明、回帰fixture、shutdown試験、性能計測を実装と同時に更新する。本設計だけで現行仕様の説明やmanifestを切り替えない。新版起動後はWindows背景を変更しないが、更新時の旧版停止処理による一度の壁紙解除は別に扱う。
+`README`・`DEVELOPMENT`・`AGENTS`の現行背景処理の説明、回帰fixture、shutdown試験、性能計測を実装と同時に更新する。0.5.0の実装と同時に現行仕様の説明とmanifestを更新する。新版起動後はWindows背景を変更しないが、更新時の旧版停止処理による一度の壁紙解除は別に扱う。
 
 保存仕様と公開コマンドの変更を伴うため、実装時はAppletのマイナー版を更新する。現行0.4.8が起点なら0.5.0とし、実装着手時の版を再確認する。設定キーの新設や最低ホスト版の引き上げは予定しない。
 
@@ -99,4 +101,4 @@ Surfaceを隠した後に見えるのは、その時点でWindowsに設定され
 
 通常回帰とRPC/GUI fixtureはfakeまたは通常の隔離ウィンドウを使い、実Explorerの階層へ自動接続しない。実デスクトップ試験は専用の対話試験として明示的に実行し、Explorer再起動やロック等の実操作は別途実行範囲を確認する。公開EXEの固定コピーでも確認し、fixture成功と実機成功を分けて記録する。
 
-現時点では本設計のソース照合と公開資料の確認までで、背面ウィンドウの試作・実機動作・書き込み削減量は未検証。対応OSビルド、混在DPI時の生成手順、実測値は実装の最小試作から記録する。
+実装時の最小試作・実デスクトップ確認・発行物の証跡はVERIFICATIONへ記録する。実ウィンドウの接続・描画・破棄と、物理入力・Explorer本体の再起動・ロック/RDP・混在DPI変更の実操作を区別し、未確認の範囲を成功扱いしない。

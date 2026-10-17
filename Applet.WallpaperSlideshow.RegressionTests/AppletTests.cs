@@ -29,9 +29,9 @@ internal static class AppletTests
         var manager = new QueueManager(); manager.SetConfig(config); manager.ReplaceQueues(queues);
         var cycle = Enumerable.Range(0, 3).Select(_ => manager.GetNextImage(0)).ToArray();
         Check(cycle.Distinct().Count() == 3, "Repeated image before completing cycle");
-        using (var result = WallpaperController.Render(new(config, [new Rectangle(0, 0, 120, 80)], 1), manager, default, root)) {
+        using (var result = WallpaperController.Render(new(config, [new Rectangle(0, 0, 120, 80)], 1), manager, default)) {
             Check(result.History.Count == 3, "Tile renderer did not consume combined folders");
-            using var bitmap = new Bitmap(result.Path);
+            var bitmap = result.Image;
             Check(Enumerable.Range(0, bitmap.Width).Any(x => Enumerable.Range(0, bitmap.Height).Any(y => bitmap.GetPixel(x, y).R > 100)), "Tile renderer produced no image");
         }
         foreach (var json in new[] { "[null]", "[{\"Folders\":null}]", "[{\"Folders\":[\"\"]}]", "[{\"Folders\":[null]}]" }) {
@@ -69,14 +69,17 @@ internal static class AppletTests
     }
     private sealed class FixtureEngine(string folder) : ISlideshowController
     {
-        private int backgroundApplications;
+        private readonly DesktopPresenter presenter = new(new DesktopTests.FakeHost(), DesktopPresenter.ScheduleOnUi,
+            error => throw new InvalidOperationException("Fixture desktop error", error));
         public bool IsPaused { get; private set; }
+        private void Display() {
+            presenter.Resume([new Rectangle(0, 0, 12, 8)]);
+            using var frame = DesktopTests.Frame(Color.Red, [new Rectangle(0, 0, 12, 8)]);
+            if (!presenter.Present(frame)) throw new Exception("Fixture memory frame was not accepted");
+        }
         public void Start(Config config, bool paused) {
             IsPaused = paused;
-            using (var wallpaper = new Bitmap(12, 8)) {
-                using (var graphics = Graphics.FromImage(wallpaper)) graphics.Clear(Color.Red);
-                wallpaper.Save(Const.WallpaperPicturePath, System.Drawing.Imaging.ImageFormat.Bmp);
-            }
+            if (!paused) Display();
             ImageLoader.ReadSize(Path.Combine(folder, "missing-image.png"));
             ImageLoader.ReadSize(Path.Combine(folder, "missing-image.png"));
             HistoryManager.Instance.EnsureInitialized(Screen.AllScreens);
@@ -85,22 +88,14 @@ internal static class AppletTests
             HistoryManager.Instance.Push(1, Path.Combine(folder, "image3.png"), config.History.Limit);
         }
         public void Configure(Config config) { HistoryManager.Instance.SetConfig(config); }
-        public void Pause(bool paused) { IsPaused = paused; }
+        public void Pause(bool paused) { IsPaused = paused; if (paused) presenter.Pause(); else if (!presenter.HasImage) Display(); }
         public void Next() { if (!IsPaused) Console.Error.WriteLine("FIXTURE_NEXT_WALLPAPER"); }
-        public void PrepareWindowsBackground() {
-            Thread.Sleep(750); // Exercise the UI's in-flight state without touching the desktop.
-            if (++backgroundApplications > 1) throw new InvalidOperationException("fixture background failure");
-            Console.Error.WriteLine("FIXTURE_PREPARE_BACKGROUND " + IsPaused);
-        }
         public void OpenWindowsBackgroundSettings() { Console.Error.WriteLine("FIXTURE_OPEN_BACKGROUND_SETTINGS"); }
         public void Stop() {
-            WallpaperController.ClearWallpaper(path => {
-                if (path != string.Empty) throw new Exception("Cleanup must clear the Windows wallpaper path");
-                using var black = new Bitmap(Const.WallpaperPicturePath);
-                if (black.Size != new Size(1, 1) || black.GetPixel(0, 0).ToArgb() != Color.Black.ToArgb())
-                    throw new Exception("Cleanup did not write a black BMP before applying it");
-                Console.Error.WriteLine("FIXTURE_CLEANUP_BLACK");
-            });
+            presenter.Dispose();
+            if (presenter.HasImage || Directory.GetFiles(folder, "*.bmp").Length != 0)
+                throw new Exception("Cleanup retained a frame or generated a BMP");
+            Console.Error.WriteLine("FIXTURE_CLEANUP_MEMORY");
             IsPaused = true;
             AppLog.Error("fixture shutdown", new IOException("expected cleanup diagnostic"));
             // The host may terminate the fixture immediately after deactivate responds.

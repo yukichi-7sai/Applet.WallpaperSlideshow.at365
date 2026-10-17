@@ -8,6 +8,5 @@ namespace at365.WallpaperSlideshow
         public static string ConfigFileName = "config.json";
         public static string ConfigPath = Path.Combine(AppDataFolder, ConfigFileName);
 
-        public static string WallpaperPicturePath => Path.Combine(AppDataFolder, "wallpaper.bmp");
     }
 }

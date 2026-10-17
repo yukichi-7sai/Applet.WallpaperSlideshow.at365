@@ -10,7 +10,7 @@
 
 ## 設計文書
 
-- [デスクトップへのメモリ描画設計](docs/desktop-memory-rendering-design.md)：Windowsの壁紙設定を変更せず、合成画像をメモリから背面ウィンドウへ表示する方式への移行。設計のみ・未実装です。
+- [デスクトップへのメモリ描画設計](docs/desktop-memory-rendering-design.md)：Windowsの壁紙設定を変更せず、合成画像をメモリから背面ウィンドウへ表示する方式への移行。実装仕様と実機確認の範囲を記載します。
 
 ## ビルド・発行・配置
 
@@ -27,27 +27,27 @@ A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365\deploy.bat "C:\Tools\AppDock"
 
 `scripts/test-protocol.cjs` / `scripts/test-ui.cjs`はテスト専用エンジンと一時画像を使用し、ユーザーの壁紙・画像フォルダーを変更しません。
 
-## Windows背景の準備（0.4.0）
+## デスクトップのメモリ描画（0.5.0）
 
-AppDock0.21.0のsettingActionsからprepare-background/background-settingsコマンドを呼びます。再生・停止設定は変更せず、STAのdispatcherと既存commandGateで直列化します。実設定ボタンは自動実行しません。
+Windowsの壁紙設定を変更せず、合成Bitmapをメモリ上でDesktopPresenterへ移し、モニター別のNativeWindowへ表示します。配置先の探索・世代・復旧、画像の所有権と停止条件は[メモリ描画設計](docs/desktop-memory-rendering-design.md)を参照してください。native Applet自身のSTAメッセージループを使用し、本体APIは変更しません。
 
-IDesktopWallpaper.SetWallpaper/SetPosition(DWPOS_SPAN)と、HKCUのExplorer/WallpapersにあるBackgroundType=0（画像）の設定を組み合わせます。BackgroundTypeはWindows設定画面の実装に依存する値で、公開APIとして保証されていません。適用後は種類の読み戻し、GetStatusのDSS_SLIDESHOWがないこと、GetPositionのスパンを確認し、不一致/API失敗では手動手順付きエラーを返します。
+Layered子ウィンドウを利用するため、EXEのapp.manifestでWindows 10/11対応を明示します（[Windowsの要件](https://learn.microsoft.com/en-us/windows/win32/winmsg/using-windows)）。dotnet.exe経由だけの検証ではなく、実apphostと発行EXEで起動を確認します。
 
-現在表示中の壁紙はWindowsのThemes/TranscodedWallpaperキャッシュからBMPへコピーします。元のwallpaper.bmpは適用後に黒く上書きするので再適用しません。停止中は1px黒画像を設定し、停止状態を保ちます。windows-background.bmpはWindowsが参照するため維持します。キャッシュ欠落/破損では背景APIを呼ばず、手動設定を案内します。
+DesktopHostは従来のWorkerW構成とProgman配下の背景構成を検出します。親のDPIコンテキストで非表示の子ウィンドウを生成し、物理画面矩形を親座標へ変換して配置します。Layered/Transparentにより入力を透過し、通常アプリの最前面への代替表示は行いません。画像更新とWM_PAINTだけで描画します。
 
-`dotnet run --project Applet.WallpaperSlideshow.RegressionTests -c Release -- --inspect-background` はCOMの読み取りだけを確認します。回帰は画像/停止状態/結果不一致/API失敗をfakeで検証します。`scripts/test-background-settings-ui.cjs`は発行版AppDock＋native fixtureで、実壁紙を変更せずフォームと実コマンド経路を確認します。Windowsスライドショー/Spotlightからの実切替はこれらの試験とは別です。
+接続先の破棄とTaskbarCreatedで表示先を取り直し、最大5回の間隔付き再接続を行います。停止中の遅延結果は表示しません。接続失敗は既存パネルとホストログへ表示し、「次の壁紙」で明示的に再試行できます。Windows背景設定への退避は行いません。旧prepare-backgroundコマンドは削除し、background-settingsは停止中に見えるWindows背景を確認する入口として維持します。
 
-参考: [SetPosition](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-idesktopwallpaper-setposition)、[GetStatus](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-idesktopwallpaper-getstatus)、[Windows設定URI](https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-settings)。
+通常回帰はfakeを使用します。`--inspect-desktop`は構成の読み取りだけ、`--desktop-smoke`は約1秒の実背面配置を行う明示的な試験です。`scripts/test-memory-native.cjs [EXE]`はEXEの固定コピーで実表示、切り替え、自身の表示HWNDを閉じた後の復旧、停止・再開、限定HWNDへの終了通知、Themesキャッシュの変更通知を確認します。利用者のExplorer本体・ロック・RDP・入力設定は操作しません。これらの成功と、実操作による互換性確認は区別します。
 
 ## 画像処理・キャッシュの実装
 
-0.4.1ではConst.AppDataFolderの基準をLocalApplicationDataへ変更した。Windows自身が管理するAPPDATA/Microsoft/Windows/Themes/TranscodedWallpaperは引き続き読み取り元にする。旧Roaming領域の移行・削除は追加しない。ホストが供給する履歴画像のimageDirectoryもPC専用rootを使用する。
+表示用のrender-*.bmp、wallpaper.bmp、windows-background.bmpの生成を廃止しました。旧Local/Roaming領域とWindowsのThemesキャッシュは自動移動・削除しません。dataコマンドは旧データフォルダーを開くために維持します。
 
 画像の走査・合成は直列に実行し、更新を重ねず、キャンセル済みの結果を適用しません。設定が同じなら描画をやり直さず、監視の保守は5秒間隔です。抽選のシャッフルは線形時間。タイル画像は1枚ずつ読み込み・縮小・解放し、全タイルの原寸画像を同時に保持しません。
 
 履歴画像は選択したモニターの表示ページだけ順次生成します。指定サイズのPNGをローカルファイルとして読み込み、通信量による画質・解像度の縮小は行いません。ページ変更・操作画面へ戻る・終了時にサムネイルを削除します。ブラウザー側でも画面外の画像を遅延読み込みします。専用トレイアイコン・トレイ項目・履歴ウィンドウは作りません。
 
-一時BMPは`%LOCALAPPDATA%\at365\Applets\WallpaperSlideshow`、履歴サムネイルはAppDockのPC専用保存先の`cache/panel-images`内に保存します。強制終了時のキャッシュが残ることはあります。元アプリのデータとは分離しています。描画の実測と検証範囲は[VERIFICATION.md](VERIFICATION.md)を参照してください。
+履歴サムネイルは従来どおりAppDockのPC専用保存先のcache/panel-images内へ保存し、ページ変更・終了時に解放します。通常再生で表示用画像ファイルや旧データフォルダーは生成しません。描画の実測と検証範囲は[VERIFICATION.md](VERIFICATION.md)を参照してください。
 
 0.4.2以降、内部のAppLogは既存の[ホストLogging API](../AppDock.at365/docs/extensions.md#sdkで使えるサービス)の`IExtensionContext.Log.ErrorAsync`へ接続します。開始前に接続し、エンジンの停止後に切り離します。操作名と例外詳細をエラーとして送り、同じ操作/メッセージは1分間抑制します。最大128件の待ち行列を1つのバックグラウンド処理で送信し、1件の通信と終了時の排出待ちはそれぞれ最大1秒。キュー満杯や通信失敗時はstderrへ出し、壁紙処理を失敗させません。独自`errors.log`の作成・追記・ローテーションを廃止し、既存ファイルは変更しません。設定反映エラーもこの経路へ統一します。起動失敗は最大1秒だけ送信完了を待ち、ホストが起動失敗のプロセスを停止する前に記録します。
 
@@ -57,11 +57,11 @@ IDesktopWallpaper.SetWallpaper/SetPosition(DWPOS_SPAN)と、HKCUのExplorer/Wall
 
 AppDockの通常終了はbefore-quitからdeactivateを呼ぶが、Electronの[before-quit](https://www.electronjs.org/docs/latest/api/app#event-before-quit)はWindowsのシャットダウン/再起動/ログオフでは発火しない。Appletの非表示DispatcherFormで[WM_ENDSESSION](https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-endsession)を直接処理し、wParam=trueのとき、その通知から戻る前にengine.Stopを同期実行する。WM_QUERYENDSESSIONは許可だけを返し、wParam=falseの取消通知では何もしない。FormClosingのWindowsShutDownを確定通知と混同しない。
 
-通常deactivate/通常FormClosing/セッション終了は同じStopEngineを使い、開始済みのエンジンだけを1回停止する。ApplicationController.PrepareShutdownはリソース解放で例外が出てもfinallyでClearWallpaperを行う。描画workerを無効化し、生成BMPを黒で上書きして既存のWindows壁紙解除APIを呼ぶ。AppDockへの非同期通信やUIのBeginInvokeを待ってから消去するものではない。壁紙のクリーンアップにはホストやSDKの変更は不要。終了時のエラーレベルを維持するログ受付のため、最低ホスト版は0.26.18とする。
+通常deactivate/通常FormClosing/セッション終了は同じStopEngineを使い、開始済みのエンジンだけを1回停止します。workerを無効化し、自前の背面ウィンドウ・Bitmap・再接続タイマー・通知購読を同期的に解放します。壁紙解除APIや黒BMP保存、ホストの非同期応答待ちは行いません。
 
 [SetProcessShutdownParameters](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setprocessshutdownparameters)でAppletプロセスを0x2ffに設定する。Windowsは大きい値から終了させるため、デフォルト0x280の親より先に処理する。設定失敗は診断ログへ記録する。セッション通知を拒否したり、終了確認ダイアログを追加したりしない。
 
-`scripts/test-session-shutdown.cjs`は別プロセスの実DispatcherForm HWNDだけへ終了メッセージを送り、取消後の再生・同期黒BMP生成・二重停止防止・ログ排出を確認する。デスクトップAPIはfixtureで代替する。`scripts/test-host-logging-ui.cjs`は固定した発行AppDockとAppletを隔離起動し、全体/個別ログ画面とホストファイルを確認する。PC自体のシャットダウン、強制終了、電源断は自動試験しない。
+`scripts/test-session-shutdown.cjs`は別プロセスの実DispatcherForm HWNDだけへ終了メッセージを送り、取消後の再生・同期メモリ/Surface解放・二重停止防止・ログ排出を確認する。デスクトップ接続はfixtureで代替する。`scripts/test-host-logging-ui.cjs`は固定した発行AppDockとAppletを隔離起動し、全体/個別ログ画面とホストファイルを確認する。PC自体のシャットダウン、強制終了、電源断は自動試験しない。
 
 ## 文書の更新
 

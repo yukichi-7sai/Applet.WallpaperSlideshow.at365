@@ -9,7 +9,6 @@ namespace at365.WallpaperSlideshow
         private static readonly Lazy<WallpaperRenderer> _lazy = new(() => new WallpaperRenderer());
 
         private Config _config = new(); // Initialize to avoid null reference
-        private static readonly Bitmap _empty = new(1, 1, PixelFormat.Format1bppIndexed);
 
         internal WallpaperRenderer() { }
         internal CancellationToken Cancellation { get; set; }
@@ -366,18 +365,4 @@ namespace at365.WallpaperSlideshow
             g.DrawImage(img, new Rectangle(x, y, w, h));
         }
 
-        /// <summary>
-        /// Overwrites the target file with a black image.
-        /// </summary>
-        public void OverwriteWithBlack(string targetPath)
-        {
-            try
-            {
-                _empty.Save(targetPath, ImageFormat.Bmp);
-            }
-            catch (Exception ex)
-            {
-                AppLog.Error("壁紙ファイルの黒塗り", ex);
-            }
-        }
         private static void Shuffle(TileImage[] array)        {            for (int i = array.Length - 1; i > 0; i--)            {                int j = Random.Shared.Next(i + 1);                (array[i], array[j]) = (array[j], array[i]);            }        }    }}

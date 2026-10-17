@@ -39,25 +39,25 @@ async function run(mode) {
     assert.equal(+pid, child.pid);
     const send = action => execFileSync(fixture, ['--send-session-message', pid, window, action], { windowsHide: true, encoding: 'utf8' }).trim();
     assert.equal(send('query'), '1', 'shutdown query allowed');
-    assert.equal(count('FIXTURE_CLEANUP_BLACK'), 0, 'query does not clear wallpaper');
+    assert.equal(count('FIXTURE_CLEANUP_MEMORY'), 0, 'query does not stop the presenter');
     assert.equal(send('cancel'), '0');
-    assert.equal(count('FIXTURE_CLEANUP_BLACK'), 0, 'cancelled shutdown preserves wallpaper');
+    assert.equal(count('FIXTURE_CLEANUP_MEMORY'), 0, 'cancelled shutdown preserves the frame');
     await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.next' });
     await waitFor(() => count('FIXTURE_NEXT_WALLPAPER') === 1);
     if (mode !== 'ordinary') {
       assert.equal(send(mode), '0');
-      await waitFor(() => count('FIXTURE_CLEANUP_BLACK') === 1);
+      await waitFor(() => count('FIXTURE_CLEANUP_MEMORY') === 1);
       assert.equal(send(mode), '0');
-      assert.equal(count('FIXTURE_CLEANUP_BLACK'), 1, 'duplicate OS messages clean up once');
+      assert.equal(count('FIXTURE_CLEANUP_MEMORY'), 1, 'duplicate OS messages clean up once');
     }
     await peer.request('deactivate');
     child.stdin.end();
     assert.equal(await exited, 0, diagnostics);
-    assert.equal(count('FIXTURE_CLEANUP_BLACK'), 1, 'OS notification and host deactivation share one cleanup');
+    assert.equal(count('FIXTURE_CLEANUP_MEMORY'), 1, 'OS notification and host deactivation share one cleanup');
     assert(logs.some(entry => entry.level === 'error' && entry.message.includes('[fixture shutdown]')), 'cleanup diagnostic drained to host');
     fs.writeFileSync(path.join(imageDirectory, 'diagnostics.log'), diagnostics);
     fs.writeFileSync(path.join(imageDirectory, 'host-logs.json'), JSON.stringify(logs, null, 2));
-    checks.push(`${mode}: actual hidden HWND / query / cancel and continued playback / black BMP before native return / once / common log / clean RPC exit`);
+    checks.push(`${mode}: actual hidden HWND / query / cancel and continued playback / memory and surfaces released before native return / once / common log / clean RPC exit`);
   } finally {
     child.stdin.end(); peer.close();
     if (child.exitCode === null) child.kill();

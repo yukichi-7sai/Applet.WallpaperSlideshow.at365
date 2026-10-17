@@ -23,6 +23,9 @@ public sealed class DispatcherForm : Form
     public Action? OnRdpDisconnect { get; set; }
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal Action? OnSessionEnding { get; set; }
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal Action? OnDesktopChanged { get; set; }
+    private static readonly uint TaskbarCreated = RegisterWindowMessage("TaskbarCreated");
 
     private const int WM_QUERYENDSESSION = 0x0011;
     private const int WM_ENDSESSION = 0x0016;
@@ -51,6 +54,7 @@ public sealed class DispatcherForm : Form
 
     protected override void WndProc(ref Message m)
     {
+        if ((uint)m.Msg == TaskbarCreated && TaskbarCreated != 0) OnDesktopChanged?.Invoke();
         if (m.Msg == WM_QUERYENDSESSION)
         {
             m.Result = (IntPtr)1; // Allow shutdown; do not stop playback until it is confirmed.
@@ -90,4 +94,6 @@ public sealed class DispatcherForm : Form
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetProcessShutdownParameters(uint level, uint flags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint RegisterWindowMessage(string message);
 }

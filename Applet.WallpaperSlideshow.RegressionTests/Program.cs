@@ -8,15 +8,23 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        if (args.Length == 1 && args[0] is "--inspect-desktop" or "--desktop-smoke") {
+            DesktopProbe.Run(args[0] == "--desktop-smoke"); return;
+        }
+        if (args.Length == 1 && args[0] == "--snapshot-background") { DesktopProbe.WriteBackground(); return; }
+        if (args.Length == 2 && args[0] == "--inspect-surfaces") { DesktopProbe.InspectSurfaces(uint.Parse(args[1])); return; }
+        if (args.Length == 3 && args[0] == "--destroy-surface") { DesktopProbe.CloseSurface(uint.Parse(args[1]), new nint(long.Parse(args[2]))); return; }
+        if (args.Length == 4 && args[0] == "--capture-surface") { DesktopProbe.CaptureSurface(uint.Parse(args[1]), new nint(long.Parse(args[2])), args[3]); return; }
+        if (args.Length == 2 && args[0] == "--create-memory-source") {
+            using var image = new Bitmap(32, 32);
+            using (var graphics = Graphics.FromImage(image)) graphics.Clear(Color.Red);
+            image.Save(args[1], System.Drawing.Imaging.ImageFormat.Png); return;
+        }
         if (args.Length == 2 && args[0] == "--find-session-window") {
             SessionShutdownTests.Find(args[1]); return;
         }
         if (args.Length == 4 && args[0] == "--send-session-message") {
             SessionShutdownTests.Send(args[1], args[2], args[3]); return;
-        }
-        if (args.Length == 1 && args[0] == "--inspect-background") {
-            using var api = new Applets.WallpaperSlideshow.WindowsBackground.DesktopBackgroundApi();
-            Console.WriteLine(JsonSerializer.Serialize(new { picture = api.IsPicture, span = api.IsSpan })); return;
         }
         if (args.Length == 2 && args[0] == "--recycle-fixture") {
             var path = Path.GetFullPath(args[1]);
@@ -28,14 +36,6 @@ internal static class Program
         if (args.Length >= 1 && args[0] == "--performance") { PerformanceProbe.Run(args.Length > 1 ? args[1] : null); return; }
         if ((args.Length == 1 && args[0] == "--protocol-fixture") || Environment.GetEnvironmentVariable("APPDOCK_WALLPAPER_FIXTURE") == "1") {
             AppletTests.RunProtocolFixture(); return;
-        }
-        if (args.Length == 2 && args[0] == "--temporary-exit")
-        {
-            var output = new WallpaperController.RenderedWallpaper(args[1], [], 0);
-            var stream = output.CreateOutput();
-            stream.Write(new byte[16]);
-            stream.Flush();
-            Environment.Exit(0); // Exercise ProcessExit with an open output stream.
         }
         var originalData = Const.AppDataFolder;
         Check(Path.GetFullPath(originalData).Equals(Path.GetFullPath(Path.Combine(
@@ -49,7 +49,7 @@ internal static class Program
         try
         {
             AppletTests.Run(testData);
-            BackgroundTests.Run(testData);
+            DesktopTests.Run();
             ValidateConfiguration();
             ValidateReadme();
             KeepLastValidConfiguration();

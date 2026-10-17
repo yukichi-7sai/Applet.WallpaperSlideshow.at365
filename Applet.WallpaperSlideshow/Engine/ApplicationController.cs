@@ -35,11 +35,11 @@ namespace at365.WallpaperSlideshow
             _dispatcher = dispatcherForm;
             _ = dispatcherForm.Handle;
             WallpaperController.Instance.Attach(dispatcherForm);
+            WallpaperController.Instance.StateChanged += OnPresentationChanged;
             _pauseState.Manual = manuallyPaused;
             _pauseState.Remote = SystemInformation.TerminalServerSession;
             _paused = _pauseState.IsPaused;
             ApplyConfig(config);
-            SetWallpaperSpanMode();
             InitializeApplication();
 
             SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
@@ -66,12 +66,13 @@ namespace at365.WallpaperSlideshow
 
             _uiTimer.Interval = config.IntervalSeconds * 1000;
             if (!_paused) _uiTimer.Start();
-            else WallpaperController.ClearWallpaper();
+            else WallpaperController.Instance.PausePresentation();
             _maintenanceTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             _maintenanceTimer.Tick += (_, _) =>
             {
                 if (_disposed) return;
                 RefreshWatchers();
+                WallpaperController.Instance.CheckDesktop();
             };
             _maintenanceTimer.Start();
         }
@@ -88,7 +89,7 @@ namespace at365.WallpaperSlideshow
             RefreshWatchers();
             if (_uiTimer != null) _uiTimer.Interval = checked(config.IntervalSeconds * 1000);
             if (_uiTimer != null && _dispatcher != null && !_pauseState.IsPaused)
-                WallpaperController.Instance.UpdateWallpaper(true);
+                WallpaperController.Instance.ResumePresentation();
         }
         public void Configure(Config config)
         {
@@ -98,7 +99,7 @@ namespace at365.WallpaperSlideshow
         {
             if (_disposed || _pauseState.IsPaused) return;
             if (Interlocked.Exchange(ref _requiredInitialize, 0) != 0) InitializeApplication(true);
-            else WallpaperController.Instance.UpdateWallpaper(true);
+            else WallpaperController.Instance.Next();
         }
 
         private void RefreshWatchers()
@@ -132,7 +133,7 @@ namespace at365.WallpaperSlideshow
             WallpaperController.Instance.Invalidate();
             HistoryManager.Instance.EnsureInitialized(StableScreensProvider.Screens);
             if (!_pauseState.IsPaused)
-                WallpaperController.Instance.UpdateWallpaper(true);
+                WallpaperController.Instance.ResumePresentation();
         }
 
         public void TogglePause(bool? forceState = null)
@@ -161,8 +162,7 @@ namespace at365.WallpaperSlideshow
             else
             {
                 _uiTimer?.Stop();
-                WallpaperController.Instance.Invalidate();
-                WallpaperController.ClearWallpaper();
+                WallpaperController.Instance.PausePresentation();
             }
 
             StateChanged?.Invoke();
@@ -241,15 +241,8 @@ namespace at365.WallpaperSlideshow
             return false;
         }
 
-        private void SetWallpaperSpanMode()
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop", true);
-            if (key != null)
-            {
-                key.SetValue("WallpaperStyle", "22");
-                key.SetValue("TileWallpaper", "0");
-            }
-        }
+        private void OnPresentationChanged() => StateChanged?.Invoke();
+        public string DisplayState => IsPaused ? "停止中（手動停止・ロック・リモート接続）" : WallpaperController.Instance.DisplayState;
 
         public static void ApplicationShutdown()
         {
@@ -261,8 +254,7 @@ namespace at365.WallpaperSlideshow
         {
             if (_shutdown) return;
             _shutdown = true;
-            try { Dispose(); }
-            finally { WallpaperController.ClearWallpaper(); }
+            Dispose();
         }
 
         public void Dispose()
@@ -276,9 +268,11 @@ namespace at365.WallpaperSlideshow
             {
                 _dispatcher.OnRdpConnect = null;
                 _dispatcher.OnRdpDisconnect = null;
+                _dispatcher.OnDesktopChanged = null;
             }
             try { _maintenanceTimer?.Dispose(); } catch (Exception ex) { AppLog.Error("設定監視の終了", ex); }
             try { _uiTimer?.Dispose(); } catch (Exception ex) { AppLog.Error("更新タイマーの終了", ex); }
+            WallpaperController.Instance.StateChanged -= OnPresentationChanged;
             WallpaperController.Instance.Dispose();
             // A slow network probe must not block shutdown. Dispose after it returns.
             if (_watcherTask != null)

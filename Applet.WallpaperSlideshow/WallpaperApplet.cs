@@ -58,13 +58,6 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         Register(services.ExtensionId + ".next", "次の壁紙に更新", async ct => {
             await dispatcher.InvokeAsync(engine.Next, ct); await PublishAsync(ct);
         });
-        Register(services.ExtensionId + ".prepare-background", "Windowsの背景を「画像・スパン」に設定", async ct => {
-            try { await dispatcher.InvokeAsync(engine.PrepareWindowsBackground, ct); }
-            catch (Exception error) when (error is not OperationCanceledException) {
-                AppLog.Error("Windowsの背景設定", error);
-                throw new InvalidOperationException("背景設定に失敗しました。" + error.Message + " " + WindowsBackground.ManualInstructions, error);
-            }
-        });
         Register(services.ExtensionId + ".background-settings", "Windowsの背景設定を開く",
             ct => dispatcher.InvokeAsync(engine.OpenWindowsBackgroundSettings, ct));
         Register(services.ExtensionId + ".history", "最近使った壁紙を表示", ct => ShowHistoryAsync(0, ct));
@@ -128,7 +121,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
                 .Select(monitor => HistoryAction($"モニター{monitor + 1}" + (monitor == historyMonitor ? "（表示中）" : ""), "monitor." + monitor) with { Selected = monitor == historyMonitor }).ToArray() } : new DockPanel("壁紙スライドショー",
             error is null ? "モニターごとの画像フォルダーから、重複なしで壁紙を切り替えます。" : "設定エラー: " + error,
             new[] {
-                new PanelFact("状態", engine.IsPaused ? "停止中（手動停止・ロック・リモート接続）" : "再生中"),
+                new PanelFact("状態", engine.DisplayState),
                 new PanelFact("更新間隔", $"{config?.IntervalSeconds ?? 60} 秒"),
                 new PanelFact("モニター", string.Join(" / ", StableScreensProvider.Screens.Select((s, i) => $"{i + 1}: {s.Bounds.Width}×{s.Bounds.Height}"))),
                 new PanelFact("画像ソース", string.Join(" / ", config?.Monitors.Select((m, i) => $"{i + 1}: {m.SourceFolders().Count()}フォルダー") ?? [])),
