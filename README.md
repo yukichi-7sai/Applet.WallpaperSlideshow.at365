@@ -1,6 +1,6 @@
 # Applet.WallpaperSlideshow.at365
 
-WallpaperSlideshow.at365をAppDockへ移したWindows用Appletです。**v0.5.1 / AppDock v0.46.0以降が必要**です。
+WallpaperSlideshow.at365をAppDockへ移したWindows用Appletです。**v0.5.2 / AppDock v0.46.0以降が必要**です。
 
 0.4.5では「停止」と「更新間隔」の設定をCodex連携へ公開します。停止のON/OFF/切り替えコマンドは設定定義から自動生成され、ショートカットにも割り当てられます。設定変更にはコマンド実行・設定変更の両許可が必要です。「次の壁紙」はコマンド実行許可だけで利用できます。
 
@@ -84,7 +84,7 @@ IDの接頭辞は`at365.wallpaper-slideshow.`です。旧`resume`/`pause`の別�
 ]
 ```
 
-AppDock 0.26.18未満では利用できません。AppDock本体と各Appletの「更新を確認」は手動でGitHubの正式リリースを調べます。Appletの問い合わせ先は`5ynonym/Applet.WallpaperSlideshow.at365`です。自動ダウンロード・更新は行いません。
+AppDock 0.26.18未満では利用できません。更新元の既定値は`github:yukichi-7sai/Applet.WallpaperSlideshow.at365`です。AppDockの「バージョン情報・更新」ページから、正式リリースを確認して更新できます。起動時の更新確認ではダウンロード・適用を行いません。
 
 ---
 

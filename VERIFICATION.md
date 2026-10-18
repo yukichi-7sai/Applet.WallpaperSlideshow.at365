@@ -1,5 +1,23 @@
 # 検証記録
 
+## 2026-10-19: GitHub更新元変更のコミット確認
+
+- 固定EXE GUIとpublish成功を再利用。標準回帰8群を今回追加しすべて成功。
+- 実装時の全追跡入力（検証文書を除く）・成功ログ・配布ファイル・共通GUI結果とスクリプト・本体treeをSHA256/IDで再照合し一致。製品追加修正・再発行なし。レビューで新たな指摘なし。保存済み設定と実利用先は保持。
+- `.artifacts/commit-validation-github-account-20261019/`へ再利用根拠・追加試験のログ・stage/commit treeを記録。今回対象だけをコミットし、その後、本体と合わせて登録済みGitHub/AQUAへの通常pushと先端一致を確認する。過去/今回の再利用資料と未確認状態のテスト資料は保持し削除0件。Release・実利用先deployなし。
+
+## 2026-10-19: GitHub更新元の新アカウント対応（0.5.2）
+
+- 開始時main／clean、現在のorigin/mainからpull --ff-only成功（Already up to date）。更新元を`yukichi-7sai/Applet.WallpaperSlideshow.at365`へ統一。既存updateRepositoryの旧アカウント名を置換。.NET発行ビルドとruntime/manifestの版一致を確認。
+
+- 発行前レビューは指摘なし。設定項目・保存ファイル・公開APIの追加削除なしのためパッチ更新。保存済みupdateSourceは変更・移行せず、既定復帰で新しいmanifestの更新元へ戻す。既存publish.batで自身の40.ARTIFACT配下へ発行成功。ZIP/feed/同梱manifestのID・版・size・SHA256・runtimeの存在が一致。
+
+- 最終AppDock 0.62.4 EXE（SHA256 043d72acd4f4176d0417bbc4166a111cecc5aaa7e8740baf21b8d6647b0e85ab）と最終Applet一式を隔離コピー。全6Appletを停止した状態で、保存済み旧指定の保持、新しい既定値の説明、版表示、「既定に戻す」後の画面／メモリ／settings.jsonの一致、停止状態維持を各Appletで確認。正常終了0。
+
+- 証跡: `.artifacts/github-account-20261019/validation.json`。共通GUI/画像: `../AppDock.at365/.artifacts/applet-github-account-20261019/profile-1792345747763/`。入力hashは前後一致、hostはb27bd046b704e1a27ad31fdc2f481f80ea086b31。変更と無関係な全回帰・実アカウント・実Google受信・実GitHub Release取得・各機能の実Windows効果は未実施。今回と過去の成功/失敗・再利用資料を保持し削除0件。
+
+- 本体のGitHub参照修正は先にb27bd04へコミット済み。今回のApplet変更は未コミット。push・Release・実利用先deployなし。
+
 ## 2026-10-18: 表示時のバッファリング（0.5.1）
 
 - 0.5.0の利用者コミット`0744076`を基点とし、DesktopHostだけを局所修正。Surface専用の`BufferedGraphicsContext`へ切り出し・拡縮を含む描画を完了してから`Render`でDCへ転送する。互換Bitmapを再利用し、paint DCを保持せず、Surface終了時にcontextも解放する。画像交換時の`SetWindowPos`は初回表示だけに限定した。画像所有権、停止/復旧、設定/保存形式・公開APIは維持。
