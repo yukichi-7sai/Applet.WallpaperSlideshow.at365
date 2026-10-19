@@ -15,12 +15,31 @@ const settings = require(path.join(host, 'out/main/shared/settings-schema')).cre
 settings.host.hardwareAcceleration = false; settings.host.closeToTray = false; settings.host.theme = 'light';
 settings.globalShortcutCommands = []; settings.gestures.enabled = false;
 settings.updates.checkHostOnStartup = false; settings.updates.checkAppletsOnStartup = false;
-settings.extensions[manifest.id] = { enabled: true, settings: { paused: true, thumbnailWidth: 1000, thumbnailHeight: 1000 } };
+settings.extensions[manifest.id] = { enabled: true, settings: { paused: true, thumbnailWidth: 1000, thumbnailHeight: 1000, historyPageSize: 7 } };
 settings.keybindings = [];
 settings.keybindings.push({ id: 'retained-history-previous', command: manifest.id + '.history.previous', key: 'Ctrl+Alt+F11', enabled: false, global: false, when: { scope: 'owner', appletIds: [] } });
 fs.writeFileSync(path.join(profile, 'settings.json'), JSON.stringify(settings));
 const checks = [], errors = [];
 let instance, ui, hostHash;
+function observeThumbnails() {
+  const probe = window.thumbnailStability = { phase: 'loading', results: {} }, nodes = new Map();
+  const sample = () => {
+    if (!probe.phase) return;
+    const result = probe.results[probe.phase] ??= { samples: 0, disabledSamples: 0, minOpacity: 1, changedImages: 0 };
+    for (const image of document.querySelectorAll('.image-button img[src]')) {
+      if (image.hidden || !image.complete || !image.naturalWidth) continue;
+      const key = probe.phase + ':' + image.closest('.card').dataset.slot, previous = nodes.get(key);
+      if (previous && (previous.image !== image || previous.src !== image.src)) result.changedImages++;
+      nodes.set(key, { image, src: image.src });
+      let opacity = 1;
+      for (let node = image; node; node = node.parentElement) opacity *= Number(getComputedStyle(node).opacity);
+      result.samples++; result.minOpacity = Math.min(result.minOpacity, opacity);
+      if (image.closest('button').disabled) result.disabledSamples++;
+    }
+  };
+  new MutationObserver(sample).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled', 'src', 'hidden', 'class', 'style', 'aria-busy'] });
+  const frame = () => { sample(); requestAnimationFrame(frame); }; requestAnimationFrame(frame);
+}
 const ready = async count => {
   await until(async () => await ui.locator('.card').count() === count && await ui.locator('#cards').getAttribute('aria-busy') === 'false', 'ready cards ' + count);
   await until(() => ui.locator('.image-button img').evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0)), 'decoded page images');
@@ -41,6 +60,7 @@ const previewSize = async () => {
   try {
     instance = await launch(profile, portable, { APPDOCK_WALLPAPER_FIXTURE: '1' });
     hostHash = instance.hash;
+    await instance.app.context().addInitScript(observeThumbnails);
     const main = instance.main;
     instance.app.context().on('page', page => page.on('pageerror', error => errors.push(error.message)));
     await until(async () => (await main.evaluate(() => window.dock.snapshot())).extensions.find(e => e.id === manifest.id)?.state === 'running', 'fixture running');
@@ -52,7 +72,9 @@ const previewSize = async () => {
     await main.evaluate(id => window.dock.executeCommand(id + '.history'), manifest.id);
     ui = await instance.page('/web/history.html'); ui.setDefaultTimeout(15000);
     ui.on('pageerror', error => errors.push(error.message));
-    await ui.getByRole('heading', { name: '最近使った壁紙', exact: true }).waitFor(); await ready(4);
+    await ui.getByRole('heading', { name: '最近使った壁紙', exact: true }).waitFor(); await ready(7);
+    await ui.evaluate(() => { window.thumbnailStability.phase = null; });
+    await instance.save({ extensionId: manifest.id, settings: { historyPageSize: 4 } }); await ready(4);
     if (longCache) {
       const cache = path.join(profile, 'data/cache/panel-images', manifest.id);
       const files = fs.readdirSync(cache, { recursive: true }).filter(file => file.endsWith('.png')).map(file => path.join(cache, file));
@@ -83,7 +105,17 @@ const previewSize = async () => {
     await ui.getByRole('button', { name: /^壁紙のプレビュー:/ }).first().click();
     await ui.keyboard.press('Escape'); assert.equal(await ui.locator('#preview').isVisible(), false);
     checks.push('preview 60vw/60vh / image click and drag stay open / backdrop and Esc close / focus restored');
+    await ui.evaluate(() => { window.thumbnailStability.phase = 'open'; });
     await ui.getByRole('button', { name: '画像を開く', exact: true }).first().click();
+    await until(() => ui.getByRole('button', { name: '画像を開く', exact: true }).first().isEnabled(), 'image open completed');
+    const stability = await ui.evaluate(() => { window.thumbnailStability.phase = null; return window.thumbnailStability.results; });
+    fs.writeFileSync(path.join(profile, 'thumbnail-stability.json'), JSON.stringify(stability, null, 2));
+    for (const phase of ['loading', 'open']) {
+      assert(stability[phase].samples > 0 && stability[phase].disabledSamples > 0, phase + ' samples include real in-flight processing');
+      assert.equal(stability[phase].minOpacity, 1, phase + ' keeps decoded thumbnails fully visible');
+      assert.equal(stability[phase].changedImages, 0, phase + ' retains decoded image nodes and URLs');
+    }
+    checks.push('decoded thumbnails retain opacity, DOM and URLs during progressive loading and real open action');
     await ui.getByRole('button', { name: '画像を削除', exact: true }).first().click();
     await ui.getByRole('dialog', { name: '画像を削除' }).waitFor();
     assert.equal(await ui.locator('#delete-path').textContent(), original);

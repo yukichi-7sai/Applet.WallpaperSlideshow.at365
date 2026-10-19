@@ -1,6 +1,6 @@
 # Applet.WallpaperSlideshow.at365
 
-WallpaperSlideshow.at365をAppDockへ移したWindows用Appletです。**v0.6.2 / AppDock v0.66.1以降が必要**です。
+WallpaperSlideshow.at365をAppDockへ移したWindows用Appletです。**v0.6.4 / AppDock v0.66.1以降が必要**です。
 
 0.4.5では「停止」と「更新間隔」の設定をCodex連携へ公開します。停止のON/OFF/切り替えコマンドは設定定義から自動生成され、ショートカットにも割り当てられます。設定変更にはコマンド実行・設定変更の両許可が必要です。「次の壁紙」はコマンド実行許可だけで利用できます。
 
