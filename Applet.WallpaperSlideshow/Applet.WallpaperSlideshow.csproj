@@ -11,7 +11,7 @@
     <StartupObject>Applets.WallpaperSlideshow.Program</StartupObject>
     <ApplicationIcon>resources/icon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.5.2</Version>
+    <Version>0.6.2</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
@@ -20,6 +20,7 @@
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="../web/**/*" Link="web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="../../AppDock.at365/dotnet/AppDock.Runtime/AppDock.Runtime.csproj" />
     <InternalsVisibleTo Include="Applet.WallpaperSlideshow.RegressionTests" />
   </ItemGroup>

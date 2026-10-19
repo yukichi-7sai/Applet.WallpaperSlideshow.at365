@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src appdock:; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <title>最近使った壁紙</title>
+  <link rel="stylesheet" href="history.css">
+  <script src="history.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <div class="heading"><span class="eyebrow">WALLPAPER HISTORY</span><h1>最近使った壁紙</h1><p>お気に入りの一枚を、もう一度。</p></div>
+      <button id="home" class="button quiet" title="壁紙の操作に戻る" aria-label="壁紙の操作に戻る"><span data-icon="back"></span><span>壁紙の操作</span></button>
+    </header>
+    <div id="error" class="error" role="alert" hidden></div>
+    <section class="collection" aria-label="壁紙の履歴">
+      <div class="collection-toolbar">
+        <div id="monitors" class="monitor-tabs" role="tablist" aria-label="モニターを選択"></div>
+        <button id="refresh" class="button quiet" aria-label="履歴を更新"><span data-icon="refresh"></span><span>更新</span></button>
+      </div>
+      <div class="list-toolbar">
+        <div class="list-summary"><span id="count">履歴を読み込んでいます</span><span id="loading" class="loading-dot" aria-label="読み込み中" hidden></span></div>
+        <nav class="pagination" aria-label="履歴のページ">
+          <button id="previous" class="icon-button" aria-label="前のページ" title="前のページ" disabled><span data-icon="left"></span></button>
+          <span id="page-number" class="page-number" aria-live="polite">—</span>
+          <button id="next" class="icon-button" aria-label="次のページ" title="次のページ" disabled><span data-icon="right"></span></button>
+        </nav>
+      </div>
+      <div id="cards" class="cards" role="tabpanel" aria-busy="true"></div>
+      <div id="empty" class="empty" hidden><span data-icon="image"></span><h2 id="empty-title"></h2><p id="empty-message"></p></div>
+    </section>
+    <footer>履歴はAppletの実行中だけ保持されます。</footer>
+  </main>
+  <dialog id="preview" class="preview-dialog" aria-labelledby="preview-title">
+    <div class="dialog-header"><h2 id="preview-title">壁紙のプレビュー</h2><button class="icon-button" id="preview-close" aria-label="閉じる" autofocus><span data-icon="close"></span></button></div>
+    <div class="preview-stage"><img id="preview-image" alt=""></div><p id="preview-caption"></p>
+  </dialog>
+  <dialog id="delete-dialog" class="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-description">
+    <div class="dialog-header"><h2 id="delete-title">画像を削除</h2></div>
+    <p id="delete-description">この元画像をごみ箱へ移します。すべてのモニターの履歴からも取り除きます。</p>
+    <p id="delete-path" class="file-path"></p>
+    <div class="dialog-actions"><button id="delete-cancel" class="button secondary" autofocus>キャンセル</button><button id="delete-confirm" class="button danger"><span data-icon="trash"></span>ごみ箱へ移す</button></div>
+  </dialog>
+</body>
+</html>

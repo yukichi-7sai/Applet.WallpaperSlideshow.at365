@@ -9,6 +9,9 @@ $taskProject = [xml](Get-Content -LiteralPath (Join-Path $taskAppletRoot 'Applet
 if ($taskManifest.version -ne $taskProject.Project.PropertyGroup.Version) { throw 'EXEとmanifestのバージョンが一致しません。' }
 dotnet publish (Join-Path $taskAppletRoot 'Applet.WallpaperSlideshow\Applet.WallpaperSlideshow.csproj') -c Release -r win-x64 --self-contained true -o $taskPublishDirectory
 if ($LASTEXITCODE -ne 0) { throw "Wallpaper Applet publish failed ($LASTEXITCODE)" }
+foreach ($taskWebAsset in @('history.html', 'history.js', 'history.css')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $taskPublishDirectory ('web\' + $taskWebAsset)) -PathType Leaf)) { throw "Missing page asset: $taskWebAsset" }
+}
 Copy-Item -LiteralPath (Join-Path $taskAppletRoot 'extension.json') -Destination (Join-Path $taskPublishDirectory 'extension.json') -Force
 $taskProductVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $taskPublishDirectory $taskManifest.entry)).ProductVersion.Split('+')[0]
 if ($taskProductVersion -ne $taskManifest.version) { throw '発行されたEXEとmanifestのバージョンが一致しません。' }

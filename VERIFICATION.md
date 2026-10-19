@@ -1,5 +1,49 @@
 # 検証記録
 
+## 2026-10-19: 独立履歴とプレビューのコミット前確認（0.6.2）
+
+- 独立history、説明ページからの履歴除去、historyコマンドの遷移先変更、history.previous/nextの削除、長パスPNGのstream保存、60%プレビューと背景クリック、新旧配置入口を含む21ファイルを対象に確認した。保存済み割り当てと画像・設定の非移行を維持する。画像とプレビューの表示改善は利用者確認済み。
+- ソース/試験/依存/配置定義67件が0.6.2の直前の検証と一致。標準回帰8群（C#入力34件）、長パスRPCと発行native起動smoke、1000件/32分割、モニター一覧GUI、配置fixtureを成功ログと発行資産のhash照合で再利用した。Appletの追加修正・版更新・再発行は不要と判断した。
+- 本体のレビューでlocalページのSession名の衝突を補正し、0.66.1を再発行した。最終本体EXE（SHA256 `f4f39cace6652da0d921bea0eb30cc9ddd434a4482f8dc870cc764d62371a4dc`）の履歴GUI **7群** が成功。260文字超のPNGを実decodeし、縦横60%寸法、内部クリック/ドラッグ、背景/Esc/閉じる、フォーカス復帰、ページ送りと削除fake、MCP8設定の反映、テーマ/狭幅、page/window/home/停止時の回収を確認した。
+- 本体の型検査/build、関連16ファイル **98/98**、共通ページGUI4群（DLL/native/Nodeと別所有者のSession分離）、既存ページGUI7群も成功。未変更AppletのEXE/manifest/web・更新ZIP全5件と運用スクリプトのhashを照合した。実NAS・壁紙/Explorer・画像関連付け・実ごみ箱はfixtureの成功に含めない。
+- 入力・再利用・最終GUI・配布物照合は[今回の記録](.artifacts/commit-validation-history-pages-20261019/validation.json)、レビューとstage/commit・GitHub/AQUAの照合は[本体側の資料](../AppDock.at365/.artifacts/commit-validation-history-pages-20261019/)に保存する。Release・全体ZIP・実利用先deployは対象外。
+
+## 2026-10-19: プレビューの60%表示と背景クリック（0.6.2）
+
+- プレビューの幅・高さをページの表示領域の60%へ変更した。画像はダイアログの残り領域へ縦横比を保って収め、長いパスの説明は高さを制限してスクロールできる。背景の外側で押してクリックしたときに閉じ、内部クリックと画像から背景へのドラッグは閉じない。既存の閉じるボタン・Esc・呼出元へのフォーカス復帰を使う。
+- 変更前にmain/origin/mainと既存未コミット変更を確認し、先行実装を保持した。設定・保存仕様・公開API・nativeの業務処理は変更しない。発行前レビューは`.artifacts/preview-dialog-20261019/review.md`。標準8群の前作業成功はC#入力の一致を照合して再利用し、変更したGUIをソース起動・固定本体EXEで確認した。
+- 実Window幅1320/900とCSS幅360で、実測幅・高さが表示領域の60%（誤差1 CSS px以内）、画像decode、内部クリック・ドラッグ、背景クリック、閉じる・Esc、フォーカス復帰を確認した。同じGUIで長パスPNG、プレビュー、削除のfake、MCP設定反映、page/Window往復と停止時回収も成功。ユーザーの壁紙・画像・実ごみ箱は操作しない。
+- 0.6.2を40.ARTIFACTへ発行。発行native EXEの安全な起動smoke、EXE/manifest/feed/更新ZIP・webの版とhash、旧保持deployと新テンプレートの隔離配置、設定/data保持が成功。本体は0.66.1の固定EXEを用い、EXE/feed・既存deployファイルのhashが不変。結果・profile・ログ・入力は[検証資料](.artifacts/preview-dialog-20261019/validation.json)、[配布物照合](.artifacts/preview-dialog-20261019/distribution.json)を参照。
+- 今回の長パスGUIはソース・固定EXEの2回成功で、同種類の直前の成功を含め3回。前作業の再利用資料と再現失敗ログを保持し、削除なし。commit・push・Release・実利用先deployは実施しない。
+
+## 2026-10-19: 履歴画像の長い保存先での失敗を修正（0.6.1）
+
+- 利用者の初回報告はUNC画像だったが、続けてローカル画像でも履歴に「画像を読み込めません」と表示され、解像度・サイズも表示されないと確認した。元画像の読み込み方式を変えず、サムネイルの保存先を調査した。通常の配置別profile・Applet・2段階の世代フォルダー・PNG名を含むパスは、一般的なユーザープロファイルでも266文字になる。
+- 修正前の`test-protocol.cjs --fixture-only --long-cache`で、実ファイル名が260文字を超えると`Image.Save(String, ImageFormat)`のGDI+ `ExternalException (0x80004005)`が発生することを再現した。元PNGはテストで生成した正常な画像。失敗ログは`.artifacts/history-unc-20261019/long-cache-before.log`へ保持した。
+- `HistoryPageController`を`.NET FileStream`へPNGを書き、閉じてからホストに登録する方式へ変更した。GDI+に長いファイル名を渡さない。保存先、生成PNG、画像品質、元画像の読み込み、登録・解放API、設定・履歴の形式は維持する。発行前レビューでファイルの排他・閉じる順序・取消と回収への影響を確認した。
+- Release buildは警告0／エラー0、標準回帰8群が成功。長パスで既存RPCの画像生成・大きいPNG・2/4/16件・ページ変更・削除確認/取消/成功・古い世代の拒否・回収が成功した。発行native EXEの不正設定拒否と限定HWND・ログ・正常終了のsmokeも成功。
+- 最終固定AppDock 0.66.1で`test-history-page-ui.cjs [EXE] --long-cache`が成功。実PNGの保存パスが260文字超であることを検査し、ブラウザーの実decode、プレビュー、開く／削除のfake、テーマと設定の反映、ページ/Window往復、home・停止時の回収を確認した。profileは`.artifacts/history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1792416534031/`。ユーザー画像・実NAS・壁紙・Explorer・実ごみ箱は操作しない。
+- 0.6.1を40.ARTIFACTへ発行し、EXE/manifest/feedの版、更新ZIP内のEXE・manifest・web、size/SHA256とソースが一致。既存運用スクリプト・deploy.local.txt・本体EXE/feedのhashを保持し、保持済み旧deployと新テンプレートの隔離配置でwebを含む一式・設定/data保持も確認した。本体は変更・再発行しない。最低本体0.66.1を維持する。
+- 証跡は[レビュー](.artifacts/history-unc-20261019/review.md)、[配布物照合](.artifacts/history-unc-20261019/distribution.json)、[入力と結果](.artifacts/history-unc-20261019/validation.json)。長パスGUIの成功は1回、通常GUIや前作業の再利用資料・今回の再現失敗ログは保持した。先行の独立ページ化を含む未コミット変更を保持し、commit・push・Release・実利用先deployは実施しない。
+
+## 2026-10-19: 最近使った壁紙の独立ページ（0.6.0 / AppDock 0.66.1）
+
+- 固定localページ`history`を登録し、画像カード、モニタータブ、簡潔な開く／削除とページ送り、プレビューと確認ダイアログ、明暗テーマ・狭幅対応を実装した。説明パネルの履歴UIを除去し、historyは独立ページを開く。homeは画像とViewを解放後、自身の説明へ戻る。history.previous/history.nextの登録を削除し、保存済み割り当ては保持した。[実装仕様](docs/history-page-design.md)を参照。
+- 標準回帰 **8群**、RPCの既存再生/停止/設定/ログ、2・4・16件の履歴、画像URLと元PNG、削除確認・取消・成功・再使用拒否・全モニターからの除去、古い表示世代の拒否が成功した。登録を拒否するViewでは残りの画像を繰り返し登録しない。1000件・400文字超のパスを32回のメタデータ取得へ分割し、全slot・応答256KiB未満・不正limit拒否・回収を確認した。
+- ソース起動と固定AppDock EXEのnative fixture GUIが成功。明暗、プレビュー/Esc、ページ先頭末尾、MCPの公開8設定と小さいサムネイルへの実反映、実Window幅900pxとCSS幅360px、page/window往復の同一View、home後の再生成、停止時の破棄と削除済みコマンドの割り当て保持を確認した。最終履歴profileは`.artifacts/history-page-ui-1792415517092/`。一時画像とfakeの開く／削除を使用し、実Windows関連付け・ごみ箱は操作しない。
+- 現行設定ヘルパーへ既存monitor-list試験を合わせ、旧JSON/Folder/Mode、登録単位の取消・保存・競合・並べ替え・削除、64フォルダー、設定/data保持を確認した。固定EXEの`.artifacts/monitor-list-ui-1792415499932/`で実Appletは無効のまま。旧test-uiはこの試験と新履歴GUIを直列実行する入口へ変更した。GUIとビルドは重ねない。
+- 発行前レビューで共通APIと生成ファイルの所有範囲、単回使用の削除token、登録失敗時のworker停止、停止時の回収と再openを確認し、修正後に必要な回帰・GUIを再実行した。WM_ENDSESSIONの隔離fixture3経路と、発行したnative EXEの不正設定拒否・ホストログ・実HWND限定メッセージ・正常終了のsmokeも成功した。実壁紙・Explorer・実OSの終了操作とは区別する。
+- `publish.bat`で0.6.0を発行した。最低本体0.66.1、EXE/manifest/feedの版、ZIPのEXE/manifestとweb 3資産のhashが一致。既存deployスクリプト・deploy.local.txtを保ち、新しい`deploy-with-pages.bat`で旧deploy後にもwebを補える。旧保持スクリプトと新テンプレートの両方で隔離配置し、EXE/manifest/webの一致と設定/data保持を確認した。
+- 共通の[レビュー](../AppDock.at365/.artifacts/dotnet-pages-20261019/review.md)、[配布物検査](../AppDock.at365/.artifacts/dotnet-pages-20261019/distribution.json)、[ログ・入力・結果一覧](../AppDock.at365/.artifacts/dotnet-pages-20261019/validation.json)を正本とする。制限内の.NET/Electron失敗と旧GUI試験の修正前ログを保持した。成功済み資料は各種類3回以内。commit・push・Release・実利用先deployは実施しない。
+
+## 2026-10-19: 最近使った壁紙の独立ページ設計（設計のみ）
+
+- [履歴ページ設計](docs/history-page-design.md)を追加し、DEVELOPMENTへ入口を設けた。固定ページ`history`、既存historyコマンドIDを維持した「最近使った壁紙を開く」、説明からの履歴UI除去、HTML/JavaScript画面と.NET処理の分担を定義した。
+- 追加指示の「壁紙履歴の前のページ」「壁紙履歴の次のページ」を廃止対象とし、`history.previous`／`history.next`の登録削除とページ内操作への置き換えを設計した。保存済みの割り当ての自動削除・移行は行わない。homeはIDを保ち、画像回収とView破棄後に自身の説明へ戻る。
+- main `47aae6924a7923f0793ea4b0ae7d103da4d22807`、作業ツリー／インデックス／未追跡がクリーンな状態から開始し、追跡先の最新取得を確認した。参照する本体はmain `45f1228441af087bcf7997684ab53d613964c9b3`。[共通設計](../AppDock.at365/docs/dotnet-applet-pages-design.md)にAPI契約を集約した。
+- 自己レビューで表示件数・サムネイル上限を維持した分割転送、画像を待たない短いRPC、古い表示世代と単回使用の削除確認token、home後の再open、View破棄時の回収境界、publishだけでなく通常deployへのweb資産追加も確認した。実装版候補0.6.0と最低本体版候補0.66.1は未適用。
+- 両repo合計で文書の相対リンク19件・アンカー1件・JSON部分例2件、相互参照と文書6ファイルだけの差分を検査し、成功した。結果は[共通の文書検査資料](../AppDock.at365/.artifacts/dotnet-pages-design-20261019/document-check.json)へ記録した。現在のEXE・設定・画像・0.5.2と発行物は変更しない。製品テスト・GUI・build・publish・commit・push・Release・実利用deployは未実施。
+
 ## 2026-10-19: GitHub更新元変更のコミット確認
 
 - 固定EXE GUIとpublish成功を再利用。標準回帰8群を今回追加しすべて成功。

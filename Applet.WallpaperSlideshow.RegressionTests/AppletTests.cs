@@ -82,10 +82,14 @@ internal static class AppletTests
             if (!paused) Display();
             ImageLoader.ReadSize(Path.Combine(folder, "missing-image.png"));
             ImageLoader.ReadSize(Path.Combine(folder, "missing-image.png"));
-            HistoryManager.Instance.EnsureInitialized(Screen.AllScreens);
+            HistoryManager.Instance.EnsureInitialized([Screen.PrimaryScreen!, Screen.PrimaryScreen!]);
             HistoryManager.Instance.SetConfig(config);
             for (int i = 0; i < 7; i++) HistoryManager.Instance.Push(0, Path.Combine(folder, $"image{i}.png"), config.History.Limit);
             HistoryManager.Instance.Push(1, Path.Combine(folder, "image3.png"), config.History.Limit);
+            if (Environment.GetEnvironmentVariable("APPDOCK_WALLPAPER_LARGE_HISTORY") == "1") {
+                for (int i = 0; i < 1000; i++) HistoryManager.Instance.Push(0,
+                    Path.Combine(folder, new string('p', 220), new string('n', 220) + i + ".png"), config.History.Limit);
+            }
         }
         public void Configure(Config config) { HistoryManager.Instance.SetConfig(config); }
         public void Pause(bool paused) { IsPaused = paused; if (paused) presenter.Pause(); else if (!presenter.HasImage) Display(); }
@@ -123,7 +127,8 @@ internal static class AppletTests
         }
         using var form = DispatcherForm.Instance; _ = form.Handle;
         Console.Error.WriteLine($"FIXTURE_SESSION_WINDOW {Environment.ProcessId} {form.Handle.ToInt64()}");
-        var applet = new WallpaperApplet(form, new FixtureEngine(folder), File.Delete);
+        var applet = new WallpaperApplet(form, new FixtureEngine(folder), File.Delete,
+            path => Console.Error.WriteLine("FIXTURE_OPEN_IMAGE " + Path.GetFileName(path)));
         var session = Task.Run(async () => {
             try { await AppletSession.RunAsync(applet, Console.In, protocol); }
             finally { await form.InvokeAsync(Application.ExitThread); }

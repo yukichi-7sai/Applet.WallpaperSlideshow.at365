@@ -5,7 +5,7 @@ const { spawn } = require('node:child_process');
 const net = require('node:net');
 const root = path.resolve(__dirname, '..'), hostRoot = path.resolve(root, '../AppDock.at365');
 const { _electron: electron, chromium } = require(path.join(hostRoot, 'node_modules/playwright'));
-const { settingsPage } = require(path.join(hostRoot, 'scripts/settings-shell-helper.cjs'));
+const { settingsPage, waitForHost } = require(path.join(hostRoot, 'scripts/settings-host-helper.cjs'));
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const profile = path.join(root, '.artifacts', `monitor-list-ui-${Date.now()}`);
 const applet = path.join(profile, 'extensions/wallpaper');
@@ -55,7 +55,7 @@ const edit = number => page.getByRole('button', { name: `モニター${number}�
       app = await electron.launch({ executablePath: executable, args: [hostRoot, `--test-profile=${profile}`], env, timeout: 45000 });
       host = await app.firstWindow();
     }
-    await host.waitForFunction(async () => (await window.dock?.snapshot())?.startupReady);
+    await waitForHost(host, async () => (await window.dock?.snapshot())?.startupReady);
     host.context().on('page', p => p.on('pageerror', error => errors.push(error.message)));
     await host.evaluate(() => window.dock.executeCommand('appdock.settings.open'));
     page = await settingsPage(host);
@@ -187,7 +187,13 @@ const edit = number => page.getByRole('button', { name: `モニター${number}�
     await dialog().getByRole('button', { name: '画像ソースフォルダー 2を削除', exact: true }).click();
     await ok(); await until(async () => (await own()).monitors[0].Folders.length === 1, 'detail save');
     checks.push('dark/light at 1280/700; detail entry shares dialog and directory removal');
-    await page.reload(); await table().waitFor();
+    // Settings now live in the host renderer; reload also recreates its detail tab.
+    await page.reload();
+    await waitForHost(host, async () => (await window.dock?.snapshot())?.startupReady);
+    await host.evaluate(() => window.dock.executeCommand('appdock.settings.open'));
+    page = await settingsPage(host);
+    await page.getByRole('button', { name: 'WallpaperSlideshow.at365', exact: true }).click();
+    await table().waitFor();
     assert.equal((await own()).intervalSeconds, 60);
     const disk = JSON.parse(fs.readFileSync(path.join(profile, 'settings.json')));
     assert.deepEqual(disk.extensions[owner].settings, await own());

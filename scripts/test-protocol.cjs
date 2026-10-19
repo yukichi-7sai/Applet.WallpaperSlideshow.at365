@@ -11,26 +11,49 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
 (async () => {
   const settings = {};
   const setPause = async value => { settings.paused=value; await peer.request('settings.changed', { ...settings }); };
-  const imageDirectory = fs.mkdtempSync(path.join(root, '.artifacts', 'protocol-images-'));
-  let panel, diagnostics = '';
+  const imageDirectory = fs.mkdtempSync(path.join(root, '.artifacts', 'protocol-images-' + (process.argv.includes('--long-cache') ? 'x'.repeat(100) + '-' : '')));
+  if (process.argv.includes('--long-cache')) assert(path.join(imageDirectory, ...Array(3).fill('x'.repeat(32))).length > 260);
+  let panel, diagnostics = '', pageOpened = false, detailsOpened = false, rejectImages = false, rejectedRegistrations = 0;
+  const registered = new Map();
   const logs = [];
   const child = spawn(fixture, ['--protocol-fixture'], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
   child.stderr.on('data', (data) => { diagnostics += data; });
   const peer = new JsonLinePeer(child.stdout, child.stdin, async (method, params) => {
     if (method === 'host.ui.panel') { panel = params; return null; }
     if (method === 'host.ui.imageDirectory') return imageDirectory;
+    if (method === 'host.pages.open') { assert.equal(params.id, 'history'); pageOpened = true; return null; }
+    if (method === 'host.ui.openDetails') { detailsOpened = true; return null; }
+    if (method === 'host.pages.dispose') { registered.clear(); return null; }
+    if (method === 'host.pages.changed') return { accepted: true, delivered: true };
+    if (method === 'host.pages.images.register' && rejectImages) { rejectedRegistrations++; throw Error('Fixture View disposed'); }
+    if (method === 'host.pages.images.register') return { images: params.files.map(item => {
+      assert(!path.relative(imageDirectory, item.file).startsWith('..')); assert(fs.existsSync(item.file));
+      const id = require('node:crypto').randomUUID(); registered.set(id, item.file);
+      return { key: item.key, id, url: 'appdock://page-images/' + id };
+    }) };
+    if (method === 'host.pages.images.release') { params.imageIds.forEach(id => registered.delete(id)); return null; }
     if (method === 'host.settings.set') { settings[params.key] = params.value; return null; }
     if (method === 'host.log') { logs.push(params); return null; }
     throw new Error('Unexpected API ' + method);
   });
   const exited = new Promise((resolve, reject) => { child.on('error', reject); child.on('exit', (code) => resolve(code)); });
   let deactivated = false;
-  const action = (title, slot) => (slot === undefined ? [...panel.actions ?? [], ...panel.tabs ?? []] : panel.images[slot].actions).find(item => item.title === title).actionId;
-  const click = (title, slot) => peer.request('panel.action', { id: action(title, slot) });
+  const pageAction = (id, input = {}) => peer.request('page.action', { id, input, pageId: 'history' });
+  const readyPage = async (monitor, page) => {
+    let value = await pageAction('history.read', { monitor, page, offset: 0, limit: 32, generation: '' });
+    const until = Date.now() + 10000;
+    while (value.loading && Date.now() < until) {
+      await new Promise(resolve => setTimeout(resolve, 15));
+      value = await pageAction('history.read', { monitor, page, offset: 0, limit: 32, generation: value.generation });
+    }
+    assert.equal(value.loading, false, 'thumbnail worker completed');
+    return value;
+  };
+  const imageFiles = value => value.items.filter(item => item.image).map(item => registered.get(item.image.split('/').at(-1)));
   try {
     const result = await peer.request('activate', { id: 'at365.wallpaper-slideshow', settings });
     assert.equal(result.tray.length, 0);
-    assert.equal(result.commands.length, 7);
+    assert.equal(result.commands.length, 5);
     assert(!result.commands.some(c => /\.(start|stop|toggle|resume)$/.test(c.id)));
     assert.equal(result.commands.some(command => command.id.endsWith('.resume')), false);
     assert(result.commands.some(c=>c.id==='at365.wallpaper-slideshow.next'));
@@ -74,36 +97,51 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
     assert.equal(settings.paused, false);
     assert.equal(panel.facts.find((fact) => fact.label === '状態').value, '表示中');
     await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.history' });
-    assert.equal(panel.images.length, 4); assert(panel.images.every(image => fs.existsSync(image.imageFile)));
-    assert.match(panel.images[0].title, /image6/);
-    const firstFiles = panel.images.map(image => image.imageFile);
-    const staleAction = action('画像を削除', 0);
-    await click('モニター2');
-    assert.equal(panel.images.length, 1); assert.match(panel.description, /モニター2/); assert.match(panel.images[0].title, /image3/);
-    assert(firstFiles.every(file => !fs.existsSync(file)), 'previous monitor thumbnails released');
-    await assert.rejects(peer.request('panel.action', { id: staleAction }), /更新/);
-    await click('モニター1');
-    await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.history.next' });
-    assert.equal(panel.images.length, 3); assert.match(panel.images[0].title, /image2/);
-    assert(fs.statSync(panel.images.at(-1).imageFile).size > 200000, 'local thumbnail keeps image quality without byte caps');
-    assert.deepEqual(panel.images[0].actions.map(action => action.title), ['画像を開く', '画像を削除']);
-    const victim = panel.images[0].tooltip;
-    await click('画像を削除', 0);
-    assert.equal(panel.title, '画像を削除'); assert.equal(panel.facts[0].value, victim); assert(fs.existsSync(victim));
-    await click('キャンセル'); assert(fs.existsSync(victim));
-    await click('画像を削除', 0);
-    const confirmedAction = action('ごみ箱へ移す');
-    await click('ごみ箱へ移す');
-    assert.equal(fs.existsSync(victim), false); assert.equal(panel.images.length, 2); assert.match(panel.images[0].title, /image1/);
-    await assert.rejects(peer.request('panel.action', { id: confirmedAction }), /更新/);
-    await peer.request('settings.changed', { intervalSeconds: 7, historyPageSize: 2 });
-    assert.equal(panel.images.length, 2);
-    await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.history' }); assert.equal(panel.images.length, 2);
-    await peer.request('settings.changed', { intervalSeconds: 7, historyPageSize: 16 });
-    assert.equal(panel.images.length, 6);
-    await click('モニター2'); assert.equal(panel.images.length, 1);
-    await click('モニター1'); assert.equal(panel.images.length, 6);
+    assert.equal(pageOpened, true);
+    assert.equal(panel.images, null); assert.equal(panel.tabs, null);
+    assert(!panel.actions.some(item => item.command.endsWith('.history')));
+    for (const suffix of ['history.previous','history.next'])
+      await assert.rejects(peer.request('command.execute', { id: 'at365.wallpaper-slideshow.' + suffix }), /Unknown command/);
+    let first = await readyPage(0, 0);
+    assert(first.items.every(item => item.status === 'ready' && item.image),
+      'thumbnail generation failed: ' + JSON.stringify(logs.filter(entry => entry.message.includes('履歴画像'))));
+    assert.equal(first.items.length, 4); assert.match(first.items[0].title, /image6/);
+    const firstFiles = imageFiles(first); assert.equal(firstFiles.length, 4);
+    let second = await readyPage(1, 0);
+    assert.equal(second.items.length, 1); assert.match(second.items[0].title, /image3/);
+    await pageAction('history.release', { generation: first.generation });
+    assert(firstFiles.every(file => !fs.existsSync(file)), 'retired thumbnails released');
+    await assert.rejects(pageAction('history.delete-request', { generation: first.generation, slot: 0 }), /更新/);
+    let page = await readyPage(0, 1);
+    await pageAction('history.release', { generation: second.generation });
+    assert.equal(page.items.length, 3); assert.match(page.items[0].title, /image2/);
+    assert(fs.statSync(imageFiles(page).at(-1)).size > 200000, 'PNG quality has no RPC byte cap');
+    await pageAction('history.open', { generation: page.generation, slot: 0 });
+    let pending = await pageAction('history.delete-request', { generation: page.generation, slot: 0 });
+    const victim = pending.path; assert(fs.existsSync(victim));
+    await pageAction('history.delete-cancel', { confirmationToken: pending.confirmationToken }); assert(fs.existsSync(victim));
+    pending = await pageAction('history.delete-request', { generation: page.generation, slot: 0 });
+    await pageAction('history.delete-confirm', { confirmationToken: pending.confirmationToken });
+    assert.equal(fs.existsSync(victim), false);
+    await assert.rejects(pageAction('history.delete-confirm', { confirmationToken: pending.confirmationToken }), /選び直/);
+    page = await readyPage(0, 1);
+    assert.equal(page.items.length, 2); assert.match(page.items[0].title, /image1/);
+    settings.intervalSeconds = 7; settings.historyPageSize = 2;
+    await peer.request('settings.changed', { ...settings });
+    page = await readyPage(0, 0); assert.equal(page.items.length, 2);
+    settings.historyPageSize = 16; await peer.request('settings.changed', { ...settings });
+    page = await readyPage(0, 0); assert.equal(page.items.length, 6);
+    const shared = page.items.find(item => /image3/.test(item.title));
+    pending = await pageAction('history.delete-request', { generation: page.generation, slot: shared.slot });
+    await pageAction('history.delete-confirm', { confirmationToken: pending.confirmationToken });
+    second = await readyPage(1, 0); assert.equal(second.total, 0, 'deleted path removed from every monitor');
+    rejectImages = true;
+    page = await readyPage(0, 0);
+    assert.equal(rejectedRegistrations, 1, 'a closed View stops the worker after the first rejected registration');
+    assert(page.items.every(item => item.status === 'error'));
     await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.home' });
+    assert.equal(detailsOpened, true); assert.equal(registered.size, 0);
+    assert.equal(fs.readdirSync(imageDirectory, { recursive: true }).filter(name => name.endsWith('.png')).length, 0);
     assert.equal(panel.images, null);
     await peer.request('deactivate'); deactivated = true;
     assert.equal(logs.filter(entry => entry.message.includes('[画像サイズ:')).length, 1, 'engine errors use host logging with duplicate suppression');
@@ -113,7 +151,7 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
     assert(logs.every(entry => entry.level === 'error'));
     child.stdin.end();
     assert.equal(await exited, 0, diagnostics);
-    console.log(JSON.stringify({ ok: true, checks: ['activation / no tray / unified start / command registration', 'start / stop / toggle / next', 'playback with invalid image settings', 'live settings / invalid rollback', 'history page sizes 2 / 4 / 16 / thumbnails / release', 'delete confirmation / cancel / exact fixture file removed / repeat rejected', 'engine / command / settings / shutdown errors use common host logging', 'deactivate / EOF'] }, null, 2));
+    console.log(JSON.stringify({ ok: true, checks: ['activation / no tray / unified start / command registration', 'start / stop / toggle / next', 'playback with invalid image settings', 'live settings / invalid rollback', 'independent page / removed previous-next commands / 2-4-16 items / thumbnail URLs and release', 'delete confirmation / cancel / exact fixture file removed / repeat rejected', 'engine / command / settings / shutdown errors use common host logging', 'deactivate / EOF'] }, null, 2));
   } finally {
     if (!deactivated && !peer.closed) await peer.request('deactivate').catch(() => {});
     child.stdin.end(); peer.close();
@@ -123,7 +161,7 @@ const fixture = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/R
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 
 // Exercise the published native entry point, but reject settings before any desktop mutation.
-(async () => {
+if (!process.argv.includes('--fixture-only')) (async () => {
   const exe = path.join(getPublishDirectory(root), 'Applet.WallpaperSlideshow.at365/Applet.WallpaperSlideshow.at365.exe');
   if (!fs.existsSync(exe)) throw new Error('Publish the Applet before the native startup smoke.');
   const child = spawn(exe, [], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
