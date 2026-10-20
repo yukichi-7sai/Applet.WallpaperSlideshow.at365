@@ -20,6 +20,7 @@ internal sealed class HistoryPageController(Form dispatcher, IExtensionContext c
     private int selectedMonitor;
     private long revision;
     private Confirmation? confirmation;
+    private readonly HistoryGalleryPreferences gallery = new(context.Storage);
     private sealed class Snapshot(string id, int monitor, int page, int total, int pageSize, int monitorCount, long revision, Size size, Item[] items, string folder, CancellationToken token)
     {
         internal readonly string Id = id, Folder = folder;
@@ -45,11 +46,14 @@ internal sealed class HistoryPageController(Form dispatcher, IExtensionContext c
         token.ThrowIfCancellationRequested();
         switch (actionId) {
             case "history.state": {
+                var galleryView = await gallery.ReadAsync(token);
                 var count = await dispatcher.InvokeAsync(() => HistoryManager.Instance.MonitorCount, token);
                 lock (sync) return Serialize(new { monitorCount = count, monitor = selectedMonitor,
                     page = positions.GetValueOrDefault(selectedMonitor), pageSize = PageSize,
-                    historyLimit = configuration()?.History.Limit ?? 30, revision, positions = new Dictionary<int, int>(positions), confirming = confirmation is not null });
+                    historyLimit = configuration()?.History.Limit ?? 30, revision, positions = new Dictionary<int, int>(positions), confirming = confirmation is not null, gallery = galleryView });
             }
+            case "history.gallery-size":
+                return Serialize(await gallery.SaveAsync(Number(input, "cardWidth", 180, 360), token));
             case "history.read": {
                 int monitor = Number(input, "monitor", 0, 100), page = Number(input, "page", 0, 1000);
                 int offset = Number(input, "offset", 0, 1000), limit = Number(input, "limit", 1, 32);

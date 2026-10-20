@@ -17,20 +17,26 @@
 
 Windows、.NET 10 SDK、隣の`AppDock.at365`ソースが必要です。
 
+共通ギャラリーのビルドには本体の固定Node/pnpm環境も使用します。`scripts/sync-gallery.ps1`が本体の`build:image-gallery`を実行し、版・元ソース・出力のSHA256を確認して`web/vendor/image-gallery/`へ同期します。実行時は同梱bundleを使用し、隣のソースrepoは不要です。公開モデル・CSS・adapterの追加規則は[共通ギャラリー](../AppDock.at365/docs/image-gallery.md)を参照してください。
+
 ```powershell
 dotnet build Applet.WallpaperSlideshow.at365.slnx -c Release
 dotnet run --project Applet.WallpaperSlideshow.RegressionTests -c Release
 .\publish.bat
-A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365\deploy-with-pages.bat "C:\Tools\AppDock"
+A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365\deploy-with-gallery.bat "C:\Tools\AppDock"
 ```
 
 発行EXEはwin-x64・自己完結型です。AppDock EXE隣の`extensions/Applet.WallpaperSlideshow.at365`へ配置します。引数なしの`deploy.bat`はGit除外の`deploy.local.txt`先頭行、未指定ならエラーになります。スクリプトは実行中アプリを強制終了しません。AppDockを起動し直すと認識します。
 
 `scripts/test-protocol.cjs` / `scripts/test-ui.cjs`はテスト専用エンジンと一時画像を使用し、ユーザーの壁紙・画像フォルダーを変更しません。
 
-0.6.0はEXE・manifestと`web/history.html`・`history.js`・`history.css`を一式で発行します。配置テンプレートもwebをコピーします。再発行は運用者所有の既存deployスクリプトを上書きしません。追加の`deploy-with-pages.bat`は既存`deploy.bat`の成功後にページ資産をコピーするため、0.5系の配置スクリプトを保持していても一式で配置できます。引数と`deploy.local.txt`は従来と同じです。
+EXE・manifestと`web/history.html`・`history.js`・`history.css`、`web/vendor/image-gallery/`のJS/CSS/manifestを一式で発行します。配置テンプレートも6つのweb資産をコピーします。再発行は運用者所有の既存deployスクリプトを上書きしません。`deploy-with-gallery.bat`は既存`deploy.bat`の成功後に6つのページ資産をコピーするため、古い配置スクリプトを保持していても一式で配置できます。引数と`deploy.local.txt`は従来と同じです。
 
 履歴のGUI試験は`scripts/test-history-page-ui.cjs [固定ホストEXE]`、設定一覧は`scripts/test-monitor-list-ui.cjs [固定ホストEXE]`です。`scripts/test-ui.cjs`はこの2本を直列で実行します。履歴はfixtureのnative EXEと一時画像を使い、画像カード・開く／削除・プレビュー・明暗テーマ・ページ送り・表示先の往復・停止時の回収を確認します。実際のごみ箱と関連付けアプリは通常試験で操作しません。
+
+発行後の履歴GUIには`--published-assets --long-cache`を付け、発行先のweb一式を隔離したnative fixtureへコピーして検証します。カードサイズの独立保存、View再生成とApplet再起動での復元、共有設定の不変も確認します。通常回帰の`GalleryPreferencesTests`は保存失敗・明示再試行・不正幅・破損／未知版の非上書きを検査します。
+
+表示サイズは`storage` capabilityを宣言してホストStorageの`gallery-view`キーへ保存します。schemaVersion 1とcardWidthだけを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版は再起動して読み直すまで上書きしません。Settingsや履歴サムネイルの寸法と分離します。既存Storage/pageActionsの範囲なので最低ホスト版0.66.1は維持します。
 
 ## デスクトップのメモリ描画（0.5.0）
 

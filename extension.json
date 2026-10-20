@@ -3,7 +3,7 @@
   "id": "at365.wallpaper-slideshow",
   "name": "Applet.WallpaperSlideshow.at365",
   "displayName": "WallpaperSlideshow.at365",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "minimumHostVersion": "0.66.1",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",
@@ -13,6 +13,7 @@
   "capabilities": [
     "ui",
     "settings",
+    "storage",
     "local-images",
     "pages"
   ],
@@ -233,6 +234,7 @@
   }],
   "pageActions": [
     { "id": "history.state" },
+    { "id": "history.gallery-size", "parameters": { "cardWidth": "number" } },
     { "id": "history.read", "parameters": { "monitor": "number", "page": "number", "offset": "number", "limit": "number", "generation": "string" } },
     { "id": "history.release", "parameters": { "generation": "string" } },
     { "id": "history.open", "parameters": { "generation": "string", "slot": "number" } },

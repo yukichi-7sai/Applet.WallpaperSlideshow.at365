@@ -1,0 +1,13 @@
+{
+  "apiVersion": 1,
+  "version": "0.74.1",
+  "files": {
+    "image-gallery.js": "7a0fdd374e2d5813af00d2e21e0a5f7a74ab68ff3bfcb1abc6533b23b8bee15a",
+    "gallery.css": "08963231f8a7a1941d892b6c2b2bdf92734aa238a4ebd3dda2449fcd530a68f8"
+  },
+  "sources": {
+    "ui/image-gallery/index.ts": "95bee7d64b165c303ee80bcc6a9dfd15ee6bf83099c5763d368f2f4f9ac679e0",
+    "ui/image-gallery/gallery.css": "08963231f8a7a1941d892b6c2b2bdf92734aa238a4ebd3dda2449fcd530a68f8",
+    "src/shared/image-gallery.ts": "6bd7b831a5eccc0cc6c361c2da512f53cf1a4ba186b53131987fda25ea177448"
+  }
+}

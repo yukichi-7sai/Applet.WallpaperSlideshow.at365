@@ -1,5 +1,22 @@
 # 検証記録
 
+## 2026-10-21: 共通ギャラリー適用のコミット前確認（0.7.0）
+
+- 本体側と合わせて最終入力687件・fixture524件・成功ログ・発行物のhashを照合。Release build、標準回帰9群、長パスRPC/安全な発行native起動smoke、固定AppDock 0.74.1の履歴GUI10群、ZIP全8件と隔離配置の成功を再利用した。追加の製品修正・再発行は不要。
+- 共通bundle、Storageの初回非保存/失敗/未知版保持、既存generation/slotと画像解放、旧運用ファイルを保持する配置入口をレビューし、未解決指摘なし。作者/コミッターとGitHub/AQUA両main`00bc835`を照合。
+- 再利用判断は[本体側のコミット検証](../AppDock.at365/.artifacts/commit-validation-gallery-0741/validation.json)、stage/commit treeは本repoの`.artifacts/commit-validation-gallery-070/`へ記録する。実壁紙・Explorer・ごみ箱・物理DPI/IME/実NASは未確認。push・Release・実利用先deployは行わない。
+
+## 2026-10-21: 共通ギャラリーと履歴カードサイズ（0.7.0）
+
+- クリーンなmain/origin/mainを確認して`pull --ff-only`、基準`00bc835`から実装。AppDockの共通カード・サイズスライダー・拡大内容をvendorへ梱包し、ページのgeneration/slot、画像解放、開く・削除確認、モニター/ページの扱いを維持した。
+- `storage` capabilityと`gallery-view`キーを追加。schemaVersion 1/cardWidth、180〜360 CSS px、20px刻み、初期260。初回表示では書かず、操作確定で直列保存。破損/未知版を上書きせず、保存失敗を明示して再試行できる。サムネイル生成寸法・再生設定・本体のライブラリー/選択サイズから独立する。保存仕様追加により0.6.4→0.7.0、既存Storage/pageActionsを使うため最低ホスト版0.66.1は維持。
+- 発行前レビューでStorage宣言不足と配置スクリプトのweb資産不足を修正。ビルドで本体bundleのapiVersion/版/ソースhash/出力hashを検査し、発行で6つのweb資産を再照合。旧配置ファイルを上書きせず、新入口`deploy-with-gallery.bat`を同梱。未解決の発行阻害指摘なし。履歴GUIの旧Applet詳細への期待は、現行ホストのApplet管理へ更新した。
+- Release buildは警告0/エラー0、標準回帰 **9群** が成功。幅検証・初回非保存・再起動復元・保存失敗/明示再試行・破損/未知版保持を追加。長パスRPCでは独立保存、画像生成/解放、削除確認を検証。発行native EXEの起動smokeは不正設定で壁紙描画前に停止し、共通ログ・限定HWND通知・正常終了を確認した。
+- AppDock **0.74.1** の固定EXEと、発行済みweb一式をコピーしたnative fixtureで[履歴GUI10群](.artifacts/history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1792516720462/result.json)が成功。3画面を合わせた共通ギャラリー検証は本体側で28群。長パスPNG decode、明暗/実Window狭幅/CSS 360px、サイズ変更でのDOMと共有設定の不変、画像操作中opacity 1とURL維持、拡大・閉鎖・フォーカス復帰、削除確認/取消、MCP設定、同じViewの表示先往復、View再生成とnative再起動でのサイズ復元、停止時の回収を確認した。
+- `publish.bat`成功。update.zipは **0.7.0 / 46344933 bytes / SHA256 `792cc0a2f522cb2657f4d3dcd664da0fb4b02919d1059d1bed4ec55e8670860c`**。EXE製品版・manifest・feedの版/size/hash、ZIP全8件のbytes、共通bundle 0.74.1のsource/vendor/発行物のhashが一致。隔離した配置fixtureへ旧deploy＋新入口で配置し、全8件の一致と設定保持、運用者所有の既存配置ファイル5件の不変を確認した。[発行物照合](.artifacts/gallery-integration-20261021/artifacts.json)。
+- [統合証跡](../AppDock.at365/.artifacts/gallery-integration-20261021/validation.json)に687最終入力、524 fixture入力、ログ/終了コード/hash、環境とレビューを記録。native回帰・build/publishのログは本repoの`.artifacts/gallery-integration-20261021/`。失敗ログと以前の再利用証拠を保持し、今回の成功分は方式別3回以内、削除対象なし、テストプロセス残存0。
+- 実壁紙描画・Explorer・関連付けアプリ・ごみ箱の操作はfakeであり、実OS操作を検証済みとはしない。物理IME/複数モニターDPI/実NASは未確認。今回の実装は未コミット。push、Release、実利用先deployは行っていない。
+
 ## 2026-10-19: 点滅と操作列の修正のコミット前確認（0.6.4）
 
 - 利用者から点滅の解消と「開く」「削除」の下端整列の確認を得て、両修正の7ファイルをコミット対象にした。main/origin/mainと未コミット変更を確認し、読み取りのfetch後にGitHub/AQUA両mainが親commit`d4286c6`と一致することを確認した。
