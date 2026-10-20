@@ -1,5 +1,21 @@
 # 検証記録
 
+## 2026-10-21: 共通画像カードの選択枠修正を反映（0.7.2）
+
+- 共通bundleをAppDock 0.74.6の出力へ更新し、選択枠を画像の上にも一定幅で描くCSSを同梱。履歴の操作・nativeエンジン・保存仕様は変更せず、通常修正として0.7.2へ更新した。先行0.7.1の画面外画像解放も含めてコミット・push対象。
+- 発行前レビューで共通部品・呼出元・保存/API境界を確認し、阻害指摘なし。Release fixture buildは警告0/エラー0、`publish.bat`成功。NuGet取得の制限エラーは同じコマンドを通常ユーザーで再実行して成功した。
+- 固定AppDock 0.74.6と発行済み6 web資産を使い、`test-history-page-ui.cjs ... --long-cache --published-assets` **10群** が成功。長パスの生成/decode、カードサイズの保存・再起動復元、プレビュー/背景クリック、fixtureへの開く・削除、明暗・表示先往復・停止時回収を確認した。本体の管理/選択/共通ダイアログを含む固定GUIは計44群。
+- EXE **0.7.2 / 51772879 bytes / SHA256 `312f8380f9bd225e8e52f9a5650085a272b461e978b5579aff5f11f3d9a4c3e3`**。manifest/feed、update.zipのsize/SHA256、6資産と共通bundleのソース/出力hashを照合。[本体側の統合証跡](../AppDock.at365/.artifacts/image-gallery-polish-20261021/validation.json)と[コミット判定](.artifacts/commit-validation-gallery-072/validation.json)を正本とする。native回帰9群は変更のないC#・試験・共通SDK/Runtimeを照合して既存成功を再利用する。
+- 現在の成功GUIは1回。以前の再利用資料と失敗記録を保護し削除0、対象GUIプロセス残存0。実壁紙・Explorer・関連付けアプリ・ごみ箱・物理DPI/IME/実NASは未確認。GitHub Releaseと実利用先deployは行わない。
+
+## 2026-10-21: 共通ギャラリーの画面外取得を解放（0.7.1）
+
+- 共通ギャラリー適用0.7.0を`f723142`へコミットし、クリーンなmainで`pull --ff-only`後に継続。本体側で再現した、取得中に画面外へ移った画像を遅延応答が再保持する問題を、共通bundle 0.74.2の更新で解消した。API/設定/Storage契約・native業務処理は変えず、パッチ0.7.1。最低ホスト版0.66.1は維持する。
+- 発行前レビューでsource/vendor/発行物の版とhash、再表示/破棄、既存generation/slot・Storage・画像解放への影響を確認。未解決指摘なし。標準native9群はC#業務/試験ソースとfixture524件・成功ログの照合で再利用。新しい発行nativeの安全な起動smoke/長パスRPCと、発行AppDock 0.74.2＋発行webの履歴GUI **10群** が成功した。共通部品を含む3用途＋512枚容量GUIは合計32群。
+- `publish.bat`成功。**0.7.1 / update.zip 46344913 bytes / SHA256 `66dbe9db082a181585343bd460e638b2490b759e3950baacbc8729ca855e16bd`**。EXE/manifest/feedの版とsize/hash、ZIP全8件、独立配置fixtureのbytes一致・設定保持、既存運用ファイル7件の不変を確認した。[成果物照合](.artifacts/gallery-capacity-20261021/artifacts.json)。制限環境のNuGet情報取得失敗はログを保持し、同じ発行を通常ユーザーで再実行して成功した。
+- 最終688入力・前後不変、524 fixture、ログ/終了コード/hash、共通部品の遅延応答再現と修正確認は[本体側の統合証跡](../AppDock.at365/.artifacts/gallery-capacity-20261021/validation.json)。今回の成功GUIは1回。直近分と過去の再利用資料、再現/失敗記録を保護し削除0、専用プロセス残存0。
+- 実壁紙・Explorer・関連付けアプリ・ごみ箱・物理DPI/IME/実NASは未確認。今回の追加修正は未コミットで、push・Release・実利用先deployは行っていない。
+
 ## 2026-10-21: 共通ギャラリー適用のコミット前確認（0.7.0）
 
 - 本体側と合わせて最終入力687件・fixture524件・成功ログ・発行物のhashを照合。Release build、標準回帰9群、長パスRPC/安全な発行native起動smoke、固定AppDock 0.74.1の履歴GUI10群、ZIP全8件と隔離配置の成功を再利用した。追加の製品修正・再発行は不要。

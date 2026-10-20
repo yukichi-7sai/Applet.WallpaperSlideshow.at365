@@ -36,9 +36,10 @@ function i(i, a) {
 			if (!e.visible || e.loading || e.item.state !== "ready" || !e.item.assetId || e.edge >= t || e.requested >= t) continue;
 			let n = e.generation, i = e.item.assetId;
 			e.loading = !0, e.requested = t, l++, e.status.textContent = e.image.hasAttribute("src") ? "" : "読み込み中", a.image(i, t).then(async (i) => {
+				if (c || n !== e.generation || !e.visible) return;
 				if (!r(i)) throw Error("画像を読み込めません");
 				let a = new Image();
-				a.src = i, await a.decode(), !c && n === e.generation && o.has(e.item.id) && (e.image.src = i, e.edge = t, e.status.textContent = "");
+				a.src = i, await a.decode(), !c && n === e.generation && e.visible && (e.image.src = i, e.edge = t, e.status.textContent = "");
 			}).catch(() => {
 				!c && n === e.generation && (e.status.textContent = "画像を読み込めません");
 			}).finally(() => {
@@ -48,7 +49,7 @@ function i(i, a) {
 	}, m = new IntersectionObserver((e) => {
 		for (let t of e) {
 			let e = o.get(t.target.dataset.imageId);
-			e && (e.visible = t.isIntersecting, !e.visible && e.image.hasAttribute("src") && (e.image.removeAttribute("src"), e.edge = 0, e.requested = 0, e.generation++));
+			e && (e.visible = t.isIntersecting, e.visible || (e.image.removeAttribute("src"), e.edge = 0, e.requested = 0, e.generation++));
 		}
 		p();
 	}, {
