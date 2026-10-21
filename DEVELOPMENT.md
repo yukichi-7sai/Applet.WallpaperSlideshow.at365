@@ -12,8 +12,8 @@
 
 ## 設計文書
 
-- [最近使った壁紙の独立ページ設計](docs/history-page-design.md)：0.6.0の実装仕様。.NET共通ページ連携、履歴コマンドの変更、前後ページ送りコマンドの廃止。
-- [デスクトップへのメモリ描画設計](docs/desktop-memory-rendering-design.md)：Windowsの壁紙設定を変更せず、合成画像をメモリから背面ウィンドウへ表示する方式への移行。実装仕様と実機確認の範囲を記載します。
+- [最近使った壁紙の独立ページ設計](docs/history-page-design.md)：.NETページと画像の寿命・操作契約。
+実装仕様と実機確認の範囲を記載します。
 
 ## ビルド・発行・配置
 
@@ -40,7 +40,7 @@ EXE・manifestと`web/history.html`・`history.js`・`history.css`、`web/vendor
 
 表示サイズは`storage` capabilityを宣言してホストStorageの`gallery-view`キーへ保存します。schemaVersion 1とcardWidthだけを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版は再起動して読み直すまで上書きしません。Settingsや履歴サムネイルの寸法と分離します。既存Storage/pageActionsの範囲なので最低ホスト版0.66.1は維持します。
 
-## デスクトップのメモリ描画（0.5.0）
+## デスクトップのメモリ描画
 
 Windowsの壁紙設定を変更せず、合成Bitmapをメモリ上でDesktopPresenterへ移し、モニター別のNativeWindowへ表示します。配置先の探索・世代・復旧、画像の所有権と停止条件は[メモリ描画設計](docs/desktop-memory-rendering-design.md)を参照してください。native Applet自身のSTAメッセージループを使用し、本体APIは変更しません。
 
@@ -48,7 +48,7 @@ Layered子ウィンドウを利用するため、EXEのapp.manifestでWindows 10
 
 DesktopHostは従来のWorkerW構成とProgman配下の背景構成を検出します。親のDPIコンテキストで非表示の子ウィンドウを生成し、物理画面矩形を親座標へ変換して配置します。Layered/Transparentにより入力を透過し、通常アプリの最前面への代替表示は行いません。画像更新とWM_PAINTだけで描画します。
 
-0.5.1では、各Surface専用の`BufferedGraphicsContext`で表示サイズの画像を完成させ、`Render`でDCへまとめて転送します。互換Bitmapは再利用し、描画ごとのpaint DCは保持せず、Surface終了時にバッファも解放します。`WM_PRINTCLIENT`も同じ描画経路を使います。`SetWindowPos`による表示・配置は初回だけとし、通常の画像交換では再配置せず、再描画を要求します。ちらつきの改善は実環境での目視確認を必要とします。
+、各Surface専用の`BufferedGraphicsContext`で表示サイズの画像を完成させ、`Render`でDCへまとめて転送します。互換Bitmapは再利用し、描画ごとのpaint DCは保持せず、Surface終了時にバッファも解放します。`WM_PRINTCLIENT`も同じ描画経路を使います。`SetWindowPos`による表示・配置は初回だけとし、通常の画像交換では再配置せず、再描画を要求します。ちらつきの改善は実環境での目視確認を必要とします。
 
 接続先の破棄とTaskbarCreatedで表示先を取り直し、最大5回の間隔付き再接続を行います。停止中の遅延結果は表示しません。接続失敗は既存パネルとホストログへ表示し、「次の壁紙」で明示的に再試行できます。Windows背景設定への退避は行いません。旧prepare-backgroundコマンドは削除し、background-settingsは停止中に見えるWindows背景を確認する入口として維持します。
 
@@ -56,21 +56,19 @@ DesktopHostは従来のWorkerW構成とProgman配下の背景構成を検出し�
 
 ## 画像処理・キャッシュの実装
 
-表示用のrender-*.bmp、wallpaper.bmp、windows-background.bmpの生成を廃止しました。旧Local/Roaming領域とWindowsのThemesキャッシュは自動移動・削除しません。dataコマンドは旧データフォルダーを開くために維持します。
+表示用のrender-*.bmp、wallpaper.bmp、windows-background.bmpの生成を廃止しました。旧Local/Roaming領域とWindowsのThemesキャッシュは自動移動・削除しません。
 
 画像の走査・合成は直列に実行し、更新を重ねず、キャンセル済みの結果を適用しません。設定が同じなら描画をやり直さず、監視の保守は5秒間隔です。抽選のシャッフルは線形時間。タイル画像は1枚ずつ読み込み・縮小・解放し、全タイルの原寸画像を同時に保持しません。
 
 履歴画像は選択したモニターの表示ページだけ順次生成します。指定サイズのPNGをローカルファイルとして読み込み、通信量による画質・解像度の縮小は行いません。ページ変更・操作画面へ戻る・終了時にサムネイルを削除します。ブラウザー側でも画面外の画像を遅延読み込みします。専用トレイアイコン・トレイ項目・独自の履歴ウィンドウは作りません。表示先はホストのページ基盤へ委ねます。
 
-履歴サムネイルは従来どおりAppDockのPC専用保存先のcache/panel-images内へ保存し、ページ変更・終了時に解放します。通常再生で表示用画像ファイルや旧データフォルダーは生成しません。描画の実測と検証範囲は[VERIFICATION.md](VERIFICATION.md)を参照してください。
+履歴サムネイルは従来どおりAppDockのPC専用保存先のcache/panel-images内へ保存し、ページ変更・終了時に解放します。描画の実測と検証範囲は[VERIFICATION.md](VERIFICATION.md)を参照してください。
 
-0.6.1からPNGは.NETの`FileStream`を開き、`Image.Save(Stream, ImageFormat.Png)`で保存します。ホストの配置別profileと履歴世代を含む通常のキャッシュパスは260文字を超えるため、GDI+のファイル名指定APIを使いません。ストリームを閉じてからホストへ登録します。`scripts/test-protocol.cjs --fixture-only --long-cache`と`scripts/test-history-page-ui.cjs [固定ホストEXE] --long-cache`は、実際に260文字を超える保存先で生成・decode・ページ変更時の回収を検証します。
-
-0.4.2以降、内部のAppLogは既存の[ホストLogging API](../AppDock.at365/docs/extensions.md#sdkで使えるサービス)の`IExtensionContext.Log.ErrorAsync`へ接続します。開始前に接続し、エンジンの停止後に切り離します。操作名と例外詳細をエラーとして送り、同じ操作/メッセージは1分間抑制します。最大128件の待ち行列を1つのバックグラウンド処理で送信し、1件の通信と終了時の排出待ちはそれぞれ最大1秒。キュー満杯や通信失敗時はstderrへ出し、壁紙処理を失敗させません。独自`errors.log`の作成・追記・ローテーションを廃止し、既存ファイルは変更しません。設定反映エラーもこの経路へ統一します。起動失敗は最大1秒だけ送信完了を待ち、ホストが起動失敗のプロセスを停止する前に記録します。
+内部のAppLogは既存の[ホストLogging API](../AppDock.at365/docs/extensions.md#sdkで使えるサービス)の`IExtensionContext.Log.ErrorAsync`へ接続します。開始前に接続し、エンジンの停止後に切り離します。操作名と例外詳細をエラーとして送り、同じ操作/メッセージは1分間抑制します。最大128件の待ち行列を1つのバックグラウンド処理で送信し、1件の通信と終了時の排出待ちはそれぞれ最大1秒。キュー満杯や通信失敗時はstderrへ出し、壁紙処理を失敗させません。独自`errors.log`の作成・追記・ローテーションを廃止し、既存ファイルは変更しません。設定反映エラーもこの経路へ統一します。起動失敗は最大1秒だけ送信完了を待ち、ホストが起動失敗のプロセスを停止する前に記録します。
 
 画像の削除はWindowsの[IFileOperationのごみ箱指定](https://learn.microsoft.com/ja-jp/windows/win32/api/shobjidl_core/nf-shobjidl_core-ifileoperation-setoperationflags)を使用します。
 
-## Windowsのシャットダウン・ログオフ（0.4.3）
+## Windowsのシャットダウン・ログオフ
 
 AppDockの通常終了はbefore-quitからdeactivateを呼ぶが、Electronの[before-quit](https://www.electronjs.org/docs/latest/api/app#event-before-quit)はWindowsのシャットダウン/再起動/ログオフでは発火しない。Appletの非表示DispatcherFormで[WM_ENDSESSION](https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-endsession)を直接処理し、wParam=trueのとき、その通知から戻る前にengine.Stopを同期実行する。WM_QUERYENDSESSIONは許可だけを返し、wParam=falseの取消通知では何もしない。FormClosingのWindowsShutDownを確定通知と混同しない。
 
@@ -80,27 +78,11 @@ AppDockの通常終了はbefore-quitからdeactivateを呼ぶが、Electronの[b
 
 `scripts/test-session-shutdown.cjs`は別プロセスの実DispatcherForm HWNDだけへ終了メッセージを送り、取消後の再生・同期メモリ/Surface解放・二重停止防止・ログ排出を確認する。デスクトップ接続はfixtureで代替する。`scripts/test-host-logging-ui.cjs`は固定した発行AppDockとAppletを隔離起動し、全体/個別ログ画面とホストファイルを確認する。PC自体のシャットダウン、強制終了、電源断は自動試験しない。
 
-## 文書の更新
-
-READMEにはインストール方法とビルド方法だけを簡潔に記載します。機能・操作・設定・既定値・動作環境・制約はdocs/usage.md、開発環境・テスト・発行・開発者用配置・実装はこのファイル、実測結果と未検証事項はVERIFICATION.mdへ記載します。共通方針は[AppDockのドキュメント方針](../AppDock.at365/docs/documentation.md)を参照してください。
-
-## 更新配布物の発行
-
-`publish.bat`は通常の発行先を生成した後、兄弟のAppDockリポジトリにある`scripts/pack-applet-update.ps1`で`A:/40.ARTIFACT/Applet.WallpaperSlideshow.at365/update.json`と`A:/40.ARTIFACT/Applet.WallpaperSlideshow.at365/update.zip`を自動生成します。共通パッカーのビルドに.NET 10 SDKが必要です。Gmail以外のAppletは、このパッケージ生成のためにNode.jsを導入する必要はありません。
-
-ZIP直下に`extension.json`と実行ファイル一式を置き、JSONにID・版・必要な本体版・ZIPのサイズとSHA256を記録します。`OutputDirectory`を指定できる発行スクリプトでも、指定先の配布内容を読み、更新用JSON/ZIPの出力先は`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`です。通常配置用サブフォルダーへJSON/ZIPを混ぜず、`deploy.bat`の配置対象も増やしません。
-
-Web配布やGitHub Releaseには同じ発行で生成したJSONとZIPを一緒に置き、JSONを最後に公開してください。ソースコードの自動生成ZIPは使用しません。発行スクリプトから外部公開は行いません。[共通更新仕様](../AppDock.at365/docs/updates.md)と[配布先の確認手順](../AppDock.at365/docs/update-checklist.md)を参照してください。
-
-## 開発生成物の保存先
-
-開発・テストの生成物は`.artifacts`へ保存します。2026-10-10に旧`artifacts`を中身を保持して改名しました。過去の検証記録内の当repoの`artifacts/`は`.artifacts/`へ読み替えてください。保存済みログ/JSONの内部パスは実行当時の値として保持しています。作業完了時の整理は[AppDockの共通手順](../AppDock.at365/DEVELOPMENT.md#作業完了時のテストフォルダー整理)に従い、実行中・状態不明・未解決の失敗記録・再利用する資料を保持します。
-
 ## 外部コマンド宣言
 
 AppDock 0.26.29以降のmanifest `commands[].automation`で公開対象を宣言します。本体側へApplet固有のIDを追加する必要はありません。公開契約・権限・動的登録の扱いは[共通操作API](../AppDock.at365/docs/automation.md#appletによる公開宣言)を参照してください。
 
-## 設定コマンド（0.4.5）
+## 設定コマンド
 
 公開設定はmanifestのpaused/intervalSecondsで宣言し、pausedのon/off/toggleは本体生成へ置き換えました。旧start/stop/toggleとresume alias、独自PauseAsyncを削除。パネルは生成IDを参照します。画像設定の検証より先にsettings.changedのpausedをエンジンへ反映し、不正な画像設定があっても停止・再開を維持します。最低本体版0.26.30、公開/生成/競合/ログは[共通仕様](../AppDock.at365/docs/automation.md#設定宣言と自動生成コマンド)を参照。RPC試験は更新通知の保存値を実プロセスへ送り、生成コマンドの実行はホストGUIで検証します。
 
@@ -115,3 +97,7 @@ GUI試験にscripts/settings-mcp-check.cjsによる隔離MCP確認を含みま�
 `extension.json`の`settingSections`で用途別のカードを宣言します。描画・余白・入力・検索・保存は[本体の共通テンプレート](../AppDock.at365/docs/extensions.md#共通の設定ページ)へ委譲し、Applet固有の設定フォームやCSSを複製しません。`monitors.list`で番号付きの共通一覧と追加・編集・削除・並べ替えダイアログを使います。番号は配列順から表示し、保存データへIDや名前を追加しません。一覧設定の最低本体版は0.46.0ですが、0.6.0の履歴ページには本体0.66.1以上が必要です。
 
 `scripts/test-monitor-list-ui.cjs`は実Appletを無効状態のまま隔離したホストで設定を編集し、旧JSON/Folder/数値Mode、フォルダー選択、登録単位の保存・取消・競合、並べ替え、テーマと狭幅を検証します。ホストのローカルNodeで実行し、発行ホストEXEを第1引数に渡すと固定コピーと発行Applet一式を使用します。壁紙は変更しません。
+
+## 共通の運用
+
+文書構成・生成物・版更新・配布は[共通手順](../AppDock.at365/docs/development-workflow.md)、[文書方針](../AppDock.at365/docs/documentation.md)、[発行と配置](../AppDock.at365/docs/publishing.md)、[更新パッケージ](../AppDock.at365/docs/updates.md)、[生成物の整理](../AppDock.at365/DEVELOPMENT.md#作業完了時のテストフォルダー整理)を参照する。Applet固有の実行条件と結果は[検証記録](VERIFICATION.md)へ記載する。
