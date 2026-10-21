@@ -1,5 +1,11 @@
 # 検証記録
 
+## 2026-10-21: READMEの縮小と操作・設定文書の移動
+
+- READMEはインストール方法とビルド方法の2章へ整理し、機能・操作・設定・既定値・JSON例は`docs/usage.md`へ移した。DEVELOPMENTとAGENTSの文書方針、兄弟repoからのリンクを追従した。
+- `ValidateUsageDocumentation`が移動先のJSON例を読み、従来と同じ`Config.Parse`で検証する。`dotnet run --project .\Applet.WallpaperSlideshow.RegressionTests -c Release`は通常ユーザー権限で9つのPASS群・終了0。制限内の同じコマンドはビルド失敗（終了1）だった。模擬デスクトップ等の既存回帰で、実壁紙・Explorer・ごみ箱は操作していない。
+- 本文と設定例の保持、ローカルリンク、Markdown構造、`git diff --check`成功。全8repoの整理と証跡は[本体の検証記録](../AppDock.at365/VERIFICATION.md)および本体`.artifacts/readme-docs-20261021/validation.json`を参照。製品コード・設定・保存仕様は変更せず、版更新・publish・commit・push・Release・実利用deployは行わない。
+
 ## 2026-10-21: 共通画像カードの選択枠修正を反映（0.7.2）
 
 - 共通bundleをAppDock 0.74.6の出力へ更新し、選択枠を画像の上にも一定幅で描くCSSを同梱。履歴の操作・nativeエンジン・保存仕様は変更せず、通常修正として0.7.2へ更新した。先行0.7.1の画面外画像解放も含めてコミット・push対象。

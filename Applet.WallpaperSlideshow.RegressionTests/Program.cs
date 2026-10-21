@@ -52,7 +52,7 @@ internal static class Program
             GalleryPreferencesTests.Run();
             DesktopTests.Run();
             ValidateConfiguration();
-            ValidateReadme();
+            ValidateUsageDocumentation();
             KeepLastValidConfiguration();
             PreservePauseReasons();
             ClipDrawing();
@@ -108,16 +108,16 @@ internal static class Program
         config.Validate([new Rectangle(0, 0, 100, 100)]);
     }
 
-    private static void ValidateReadme()
+    private static void ValidateUsageDocumentation()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory != null && !File.Exists(Path.Combine(directory.FullName, "Applet.WallpaperSlideshow.at365.slnx")))
             directory = directory.Parent;
         Check(directory != null, "Repository root not found");
-        var text = File.ReadAllText(Path.Combine(directory!.FullName, "README.md"));
+        var text = File.ReadAllText(Path.Combine(directory!.FullName, "docs", "usage.md"));
         var example = System.Text.RegularExpressions.Regex.Match(text, "```json\\s*(.*?)```",
             System.Text.RegularExpressions.RegexOptions.Singleline);
-        Check(example.Success, "README config example missing");
+        Check(example.Success, "Usage documentation config example missing");
         Config.Parse("{\"Monitors\":" + example.Groups[1].Value + "}");
     }
 

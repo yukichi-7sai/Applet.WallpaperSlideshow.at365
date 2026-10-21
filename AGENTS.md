@@ -4,7 +4,7 @@
 
 作業開始時は[A:入口](../../AGENTS.md)、[共通開発指示](../AGENTS.md)、[ホスト指示](../AppDock.at365/AGENTS.md)を確認する。実装したモジュールは版を更新して自身の40.ARTIFACT配下へ発行する。commit・公開・実利用先へのdeployは別指示。
 
-- 利用者向け仕様はREADME、開発手順はDEVELOPMENT、検証結果はVERIFICATIONへ分ける。
+- READMEはインストール方法とビルド方法だけとし、機能・操作・設定・既定値はdocs/usage.md、開発文書の入口はDEVELOPMENT、検証結果はVERIFICATIONへ分ける。
 - 0.5.0以降は[メモリ描画設計](docs/desktop-memory-rendering-design.md)に従い、メモリ内の合成Bitmapをモニター別の背面ウィンドウへ表示する。表示用BMPは生成せず、壁紙設定API・背景レジストリ書換え・WindowsのThemesキャッシュの読書きを行わない。旧Local/Roaming領域や既存BMPは自動移行・削除しない。
 - 0.4.2以降のエラーは既存のホスト`IExtensionContext.Log`へ送り、AppDockの全体ログとApplet詳細のログに表示する。独自errors.logは作成・追記しない。既存ファイルは保持する。同期のエンジンからは上限付きキューで直列送信し、重複抑制・通信失敗時のstderr・停止処理後の短い排出待ちを維持する。共通APIは[Applet API](../AppDock.at365/docs/extensions.md)を参照する。
 - 表示中Bitmapの所有権はDesktopPresenterへ移し、交換・停止・終了時に解放する。通常回帰はfakeの接続先を使い、実Explorerへの接続は明示的な対話試験に限定する。接続失敗時に旧壁紙方式へ退避しない。

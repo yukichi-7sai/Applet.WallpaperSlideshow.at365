@@ -1,12 +1,14 @@
 # Applet.WallpaperSlideshow.at365 開発ガイド
 
+機能の説明・操作方法・設定・既定値・動作環境は[機能・操作・設定](docs/usage.md)を参照してください。共通の文書構成は[ドキュメント方針](../AppDock.at365/docs/documentation.md)に従います。
+
 ## 発行・配置ファイルの保存先
 
 標準発行先は `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365` です。`publish.bat`はソースrepo、`deploy.bat`は発行先から実行します。配置用ファイル・設定の保持とテンプレートの更新は[共通発行手順](../AppDock.at365/docs/publishing.md)を参照してください。
 
 実装時のテスト選択、コミット前の必要回帰、リリース前のコミット/プッシュ確認と検証証跡の再利用は、[本体・Applet共通手順](../AppDock.at365/docs/development-workflow.md)に従います。この文書の試験コマンドは、その段階に応じて実行します。
 
-利用方法は[README.md](README.md)、実測結果と未確認事項は[VERIFICATION.md](VERIFICATION.md)を参照してください。
+インストールとビルドの概要は[README.md](README.md)、実測結果と未確認事項は[VERIFICATION.md](VERIFICATION.md)を参照してください。
 
 ## 設計文書
 
@@ -80,7 +82,7 @@ AppDockの通常終了はbefore-quitからdeactivateを呼ぶが、Electronの[b
 
 ## 文書の更新
 
-READMEには動作環境・導入・操作・設定・利用上の制約を記載します。開発環境・ビルド・テスト・発行・開発者用配置・実装の説明はこのファイル、実測結果と未検証事項はVERIFICATION.mdへ記載します。共通方針は[AppDockのドキュメント方針](../AppDock.at365/docs/documentation.md)を参照してください。
+READMEにはインストール方法とビルド方法だけを簡潔に記載します。機能・操作・設定・既定値・動作環境・制約はdocs/usage.md、開発環境・テスト・発行・開発者用配置・実装はこのファイル、実測結果と未検証事項はVERIFICATION.mdへ記載します。共通方針は[AppDockのドキュメント方針](../AppDock.at365/docs/documentation.md)を参照してください。
 
 ## 更新配布物の発行
 
