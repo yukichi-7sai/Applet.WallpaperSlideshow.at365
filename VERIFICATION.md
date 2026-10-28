@@ -1,6 +1,21 @@
 # 検証記録
 
-対象の現行版は`0.7.3`。以下は記録した条件での検証結果であり、外部サービスや実機条件の現在の動作保証とは区別する。
+対象の現行版は`0.7.5`。以下は記録した条件での検証結果であり、外部サービスや実機条件の現在の動作保証とは区別する。
+
+## 2026-10-28: 取り消し版のコミット照合
+
+- 取り消し版0.7.5の全77入力、完全ログのSHA256、発行物全8ファイル・ZIP/feedを実装時の証跡と照合し、一致を確認。Releaseビルド、標準回帰、fakeエンジンのRPC8項目、発行EXEの不正設定拒否・自身のHWND操作・正常終了の成功を再利用する。製品の追加修正・版更新・再発行はない。
+- コミット対象は版番号・取り消し記録・標準ビルドによるギャラリー生成元メタデータだけで、起動コードと開発文書は試行前のまま。JS/CSSのGit blobは試行前と一致。本体の並行作業は対象外。必要範囲に不足はなく、製品テストの再実行は行わない。
+- 証跡: `.artifacts/commit-validation-app-id-rollback-20261028/`のreuse.json、stage.json、result.json。stage treeとcommit treeを照合し、GitHub origin/mainへ通常pushした結果とリモート先端の一致を記録する。Release・実利用deployは行わない。
+
+## 2026-10-28: AppUserModelIDの試行を取り消し（0.7.5）
+
+- 0.7.4で本体と共通のAppUserModelIDを設定したが、利用者の実機ではタスクマネージャーの統合表示に効果がなかったため、依頼に従って取り消した。Program.csとDEVELOPMENT.mdは試行前のmain/c8fe3fbとGit blob一致。設定・保存形式・公開API・終了管理は変更していない。
+- 発行済み試行版より新しい取り消し版として0.7.5へパッチ更新。発行前レビューで識別子設定・P/Invoke・追加説明の除去と既存処理の復元を確認し、阻害指摘なし。
+- Releaseビルドは警告・エラー0、既存回帰とfakeエンジンのRPC試験8項目が成功。発行EXEでも不正設定の実デスクトップ接続前の拒否・共通エラーログ・自身のHWNDへのquery/cancel/end・正常終了を確認。実Explorer表示・壁紙変更は行っていない。
+- publish.batは終了コード0。EXE/manifest/feedの版一致、ZIP全8ファイルのサイズ/SHA256、既存配置スクリプト保持を確認。標準ビルドに伴うギャラリー生成元0.99.16のメタデータは維持し、JS/CSSのGit正規化後の内容は試行前と一致。取り消し版の実利用deployは行っていない。
+- 証跡: `.artifacts/process-app-id-rollback-20261028/`のreview.json、build.log、regression.log、publish.log、published-protocol.log、package-result.json、validation.json。検証前入力一覧は時計repoの同名フォルダー。試行時のAPI検証・初回発行の改行差診断・未達結果は`.artifacts/process-app-id-20261028/`に保持し、今回の方式の成功は2回で削除0件。
+- Appletの検証前後の入力は文書追記以外一致。本体では並行する画像関連9ファイルと新規試験の変更を検出して保持した。SDK/Runtime・ギャラリー生成元・ビルド依存・固定配布物は不変で、今回の検証に影響しない。本作業による本体ソース変更・commit・push・Releaseなし。
 
 ## 2026-10-26: 全変更Appletのローカルコミット照合
 

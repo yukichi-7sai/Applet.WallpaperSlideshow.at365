@@ -3,7 +3,7 @@
   "id": "at365.wallpaper-slideshow",
   "name": "Applet.WallpaperSlideshow.at365",
   "displayName": "WallpaperSlideshow",
-  "version": "0.7.3",
+  "version": "0.7.5",
   "minimumHostVersion": "0.66.1",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",
