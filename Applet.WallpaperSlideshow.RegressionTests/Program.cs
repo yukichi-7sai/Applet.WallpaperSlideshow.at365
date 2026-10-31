@@ -49,7 +49,6 @@ internal static class Program
         try
         {
             AppletTests.Run(testData);
-            GalleryPreferencesTests.Run();
             DesktopTests.Run();
             ValidateConfiguration();
             ValidateUsageDocumentation();

@@ -7,14 +7,14 @@ using DockPanel = AppDock.SDK.Panel;
 
 namespace Applets.WallpaperSlideshow;
 
-internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engine, Action<string>? deleteImage = null, Action<string>? openImage = null) : IAppDockExtension, IPageActionHandler
+internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engine) : IAppDockExtension, IPageFileHandler
 {
     private IExtensionContext? context;
     private AppLog.HostSession? logging;
     private IDisposable? subscription;
     private Config? config;
     private string? fingerprint;
-    private HistoryPageController? history;
+    private HistoryPublisher? history;
     private bool started;
     private readonly SemaphoreSlim commandGate = new(1, 1);
     public async Task ActivateAsync(IExtensionContext services, CancellationToken token)
@@ -35,9 +35,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
             try { await action(ct); } finally { commandGate.Release(); }
         });
         var options = SlideshowOptions.Read(services.Settings);
-        var imageFolder = Path.Combine(await services.Ui.GetImageDirectoryAsync(token), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(imageFolder);
-        history = new(dispatcher, services, imageFolder, () => config, deleteImage, openImage);
+        history = new(dispatcher, services.Storage);
         await dispatcher.InvokeAsync(() => {
             options.Validate(StableScreensProvider.Screens.Select(s => s.Bounds));
             started = true;
@@ -46,14 +44,13 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
             fingerprint = SlideshowOptions.Fingerprint(options);
         }, token);
         Register(services.ExtensionId + ".next", "次の壁紙に更新", async ct => {
-            await dispatcher.InvokeAsync(engine.Next, ct); await PublishAsync(ct); await history.InvalidateAsync(ct);
+            await dispatcher.InvokeAsync(engine.Next, ct); await PublishAsync(ct); await history.PublishAsync(ct);
         });
         Register(services.ExtensionId + ".background-settings", "Windowsの背景設定を開く",
             ct => dispatcher.InvokeAsync(engine.OpenWindowsBackgroundSettings, ct));
-        Register(services.ExtensionId + ".history", "最近使った壁紙を開く", ct => services.Pages.OpenAsync(HistoryPageController.PageId, ct));
+        Register(services.ExtensionId + ".history", "最近使った壁紙を開く", ct => services.Pages.OpenAsync(HistoryPublisher.PageId, ct));
         Register(services.ExtensionId + ".home", "壁紙の操作に戻る", async ct => {
-            await history.ResetAsync(false, ct);
-            await services.Pages.DisposeAsync(HistoryPageController.PageId, ct);
+            await services.Pages.DisposeAsync(HistoryPublisher.PageId, ct);
             await PublishAsync(ct);
             await services.Ui.OpenDetailsAsync(ct);
         });
@@ -70,6 +67,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
         ApplicationController.Instance.StateChanged += StateChanged;
         await PublishAsync(token);
+        await history.PublishAsync(token);
     }
     private async Task ApplyAsync(CancellationToken token)
     {
@@ -84,7 +82,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
                 if (nextFingerprint != fingerprint) { engine.Configure(options); fingerprint = nextFingerprint; config = options; }
             }, token);
             await PublishAsync(token);
-            if (history is not null) await history.InvalidateAsync(token);
+            if (history is not null) await history.PublishAsync(token);
         } catch (Exception error) when (error is not OperationCanceledException) {
             AppLog.Error("AppDock設定の反映", error);
             await PublishAsync(token, error.Message);
@@ -111,13 +109,15 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
             }), token);
         await services.Ui.ShowPanelAsync(panel, token);
     }
-    public async Task<JsonElement?> HandlePageActionAsync(string actionId, JsonElement input, string pageId, CancellationToken token)
+    public async Task HandlePageFileRemovedAsync(string pageId, string file, CancellationToken token)
     {
-        if (pageId != HistoryPageController.PageId || history is null || context is null)
+        if (pageId != HistoryPublisher.PageId || history is null || context is null)
             throw new InvalidOperationException("履歴ページを開き直してください。");
         await commandGate.WaitAsync(token);
-        try { return await history.HandleAsync(actionId, input, token); }
-        catch (Exception error) when (error is not OperationCanceledException) { AppLog.Error("履歴ページの操作", error); throw; }
+        try {
+            await dispatcher.InvokeAsync(() => HistoryManager.Instance.Remove(file), token);
+            await history.PublishAsync(token);
+        }
         finally { commandGate.Release(); }
     }
     private async void DisplayChanged(object? sender, EventArgs e) => await RefreshStateAsync();
@@ -126,7 +126,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
     {
         try {
             await PublishAsync(CancellationToken.None);
-            if (context is not null && history is not null) await history.InvalidateAsync(CancellationToken.None);
+            if (context is not null && history is not null) await history.PublishAsync(CancellationToken.None);
         }
         catch (Exception error) { if (context is not null) AppLog.Error("表示状態の更新", error); }
     }
@@ -137,7 +137,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         ApplicationController.Instance.StateChanged -= StateChanged;
         context = null;
         try {
-            if (history is not null) { await history.ResetAsync(true, CancellationToken.None); history = null; }
+            if (history is not null) { history.Stop(); history = null; }
             await dispatcher.InvokeAsync(() => {
                 try { StopEngine(); }
                 finally { if (dispatcher is DispatcherForm sessionWindow) sessionWindow.OnSessionEnding = null; }

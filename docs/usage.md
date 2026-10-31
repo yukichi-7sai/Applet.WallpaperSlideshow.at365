@@ -1,6 +1,6 @@
 # Applet.WallpaperSlideshow.at365 機能・操作・設定
 
-デスクトップの画像をメモリ内で合成・表示するWindows用Appletです。**AppDock 0.66.1以上**が必要です。
+デスクトップの画像をメモリ内で合成・表示するWindows用Appletです。**AppDock 0.112.2以上**が必要です。
 
 「停止」と「更新間隔」の設定をCodex連携へ公開します。停止のON/OFF/切り替えコマンドは設定定義から自動生成され、ショートカットにも割り当てられます。設定変更にはコマンド実行・設定変更の両許可が必要です。「次の壁紙」はコマンド実行許可だけで利用できます。
 
@@ -43,16 +43,16 @@ AppDock共通の「開始までの秒数」は**既定30秒**。有効化・AppD
 
 コマンドはAppDockのパレット・ピン留め・ショートカットで使用します。生成コマンドはAppletの起動前からキーを設定できますが、実行は有効・稼働中に限ります。Appletを有効化し、必要なら「今すぐ開始」を押してください。旧start/stop/toggle/resume/pauseは廃止しました。既存のキー・トレイ・ジェスチャー割当は、新しいコマンドへ割り当て直してください。
 
-| ID末尾 | 操作 |
-| --- | --- |
-| `settings.paused.off` | 開始／再開。手動停止を解除し、再生中なら維持 |
-| `settings.paused.on` | 停止。現在の壁紙を消去し、停止状態を保存 |
-| `settings.paused.toggle` | 手動停止状態を反転して保存 |
-| `next` | 次の壁紙に更新 |
-| `history` | 最近使った壁紙の独立ページを開く |
-| `home` | 履歴ページを閉じ、ホストのApplet管理へ戻る（旧ホストではApplet詳細） |
-| `data` | データフォルダーを開く |
-| `background-settings` | Windowsの「個人用設定 → 背景」を開く |
+| ID末尾                   | 操作                                                                 |
+| ------------------------ | -------------------------------------------------------------------- |
+| `settings.paused.off`    | 開始／再開。手動停止を解除し、再生中なら維持                         |
+| `settings.paused.on`     | 停止。現在の壁紙を消去し、停止状態を保存                             |
+| `settings.paused.toggle` | 手動停止状態を反転して保存                                           |
+| `next`                   | 次の壁紙に更新                                                       |
+| `history`                | 最近使った壁紙の独立ページを開く                                     |
+| `home`                   | 履歴ページを閉じ、ホストのApplet管理へ戻る（旧ホストではApplet詳細） |
+| `data`                   | データフォルダーを開く                                               |
+| `background-settings`    | Windowsの「個人用設定 → 背景」を開く                                 |
 
 IDの接頭辞は`at365.wallpaper-slideshow.`です。旧`resume`/`pause`の別名も廃止し、生成コマンドへ統一しています。画像ごとの「履歴1を開く」等はコマンド登録せず、履歴ビュー専用のボタンで処理します。
 
@@ -74,9 +74,9 @@ IDの接頭辞は`at365.wallpaper-slideshow.`です。旧`resume`/`pause`の別�
 
 ## データの保存先
 
-履歴カードの表示サイズはAppDockのPC専用保存先の`storage/at365.wallpaper-slideshow/gallery-view.json`に保存します。初めてサイズを変更したときに作成し、再起動後も復元します。保存できなかった場合は画面に表示し、「保存を再試行」でやり直せます。破損・未知形式のデータは自動で上書きしません。
+履歴カードの表示サイズはAppDockの端末別Storage（`data/storage/at365.wallpaper-slideshow/devices/<端末名>/gallery-view.json`）に保存します。初めてサイズを変更したときに作成し、再起動後も復元します。保存できなかった場合は画面に表示し、「保存を再試行」でやり直せます。破損・未知形式のデータは自動で上書きしません。
 
-表示画像はメモリ内で合成し、表示用BMPやWindowsのThemesキャッシュへの保存は行いません。履歴サムネイルはAppDockのPC専用保存先のcache/panel-images、エラーログはAppDockへ保存します。ページ変更・操作画面へ戻る・終了時にサムネイルを削除します。旧Local/Roaming領域や旧BMPは自動移動・削除せず、「データフォルダーを開く」は従来フォルダーを開きます。
+表示画像はメモリ内で合成し、表示用BMPやWindowsのThemesキャッシュへの保存は行いません。履歴のパス一覧とページ位置はStorageのメモリ保存を使い、JSONや履歴画像をファイルへ書き出しません。元画像は表示時に読み、読めない場合は画像を表示しません。ページを閉じる・別ページへ移る・最小化すると表示用画像を解放し、再表示時に読み直します。エラーログはAppDockへ保存します。旧Local/Roaming領域や旧BMPは自動移動・削除せず、「データフォルダーを開く」は従来フォルダーを開きます。
 
 ## 手動設定の例・更新の確認
 
@@ -84,8 +84,23 @@ IDの接頭辞は`at365.wallpaper-slideshow.`です。旧`resume`/`pause`の別�
 
 ```json
 [
-  { "Folders": ["C:/Wallpapers/Art", "C:/Wallpapers/Photos"], "Mode": "Tile", "TileCount": 13, "PaddingLeft": 1, "PaddingRight": 1, "PaddingTop": 1, "PaddingBottom": 40 },
-  { "Folders": ["C:/Wallpapers/Portrait"], "Mode": "Fit", "PaddingLeft": 1, "PaddingRight": 1, "PaddingTop": 1, "PaddingBottom": 1 }
+  {
+    "Folders": ["C:/Wallpapers/Art", "C:/Wallpapers/Photos"],
+    "Mode": "Tile",
+    "TileCount": 13,
+    "PaddingLeft": 1,
+    "PaddingRight": 1,
+    "PaddingTop": 1,
+    "PaddingBottom": 40
+  },
+  {
+    "Folders": ["C:/Wallpapers/Portrait"],
+    "Mode": "Fit",
+    "PaddingLeft": 1,
+    "PaddingRight": 1,
+    "PaddingTop": 1,
+    "PaddingBottom": 1
+  }
 ]
 ```
 
@@ -103,7 +118,7 @@ IDの接頭辞は`at365.wallpaper-slideshow.`です。旧`resume`/`pause`の別�
 
 ## 公開設定の拡充
 
-Codexから停止・更新間隔に加え、タイル間の余白、履歴件数、サムネイルの幅/高さ、ファイル名の表示文字数、1ページの表示件数を取得・変更できます。履歴件数を減らすと実行中の古い履歴は削られますが、元画像は削除しません。モニターごとの画像フォルダーや表示方法は設定画面から編集してください。必要な本体版は0.26.30です。
+Codexから停止・更新間隔に加え、タイル間の余白、履歴件数、サムネイルの幅/高さ、ファイル名の表示文字数、1ページの表示件数を取得・変更できます。履歴件数を減らすと実行中の古い履歴は削られますが、元画像は削除しません。モニターごとの画像フォルダーや表示方法は設定画面から編集してください。必要な本体版は0.112.2です。
 
 ## 共通の設定画面
 

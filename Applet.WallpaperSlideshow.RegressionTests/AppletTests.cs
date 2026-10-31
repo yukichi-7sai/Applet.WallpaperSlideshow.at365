@@ -127,8 +127,7 @@ internal static class AppletTests
         }
         using var form = DispatcherForm.Instance; _ = form.Handle;
         Console.Error.WriteLine($"FIXTURE_SESSION_WINDOW {Environment.ProcessId} {form.Handle.ToInt64()}");
-        var applet = new WallpaperApplet(form, new FixtureEngine(folder), File.Delete,
-            path => Console.Error.WriteLine("FIXTURE_OPEN_IMAGE " + Path.GetFileName(path)));
+        var applet = new WallpaperApplet(form, new FixtureEngine(folder));
         var session = Task.Run(async () => {
             try { await AppletSession.RunAsync(applet, Console.In, protocol); }
             finally { await form.InvokeAsync(Application.ExitThread); }

@@ -73,11 +73,45 @@ settings.keybindings.push({
   global: false,
   when: { scope: "owner", appletIds: [] },
 });
-fs.writeFileSync(path.join(profile, "settings.json"), JSON.stringify(settings));
+fs.writeFileSync(
+  require(path.join(host, "scripts/test-settings.cjs")).file(profile),
+  JSON.stringify(settings),
+);
 const checks = [],
   errors = [];
 let instance, ui, hostHash;
 function observeThumbnails() {
+  window.historyFetches = [];
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (...parameters) => {
+    try {
+      const response = await originalFetch(...parameters);
+      window.historyFetches.push({
+        url: String(parameters[0]),
+        status: response.status,
+      });
+      return response;
+    } catch (error) {
+      window.historyFetches.push({
+        url: String(parameters[0]),
+        error: String(error),
+      });
+      throw error;
+    }
+  };
+  const liveUrls = new Set();
+  const create = URL.createObjectURL.bind(URL),
+    revoke = URL.revokeObjectURL.bind(URL);
+  URL.createObjectURL = (value) => {
+    const url = create(value);
+    liveUrls.add(url);
+    return url;
+  };
+  URL.revokeObjectURL = (url) => {
+    liveUrls.delete(url);
+    revoke(url);
+  };
+  window.historyLiveUrls = liveUrls;
   const probe = (window.thumbnailStability = { phase: "loading", results: {} }),
     nodes = new Map();
   const sample = () => {
@@ -189,6 +223,28 @@ const previewSize = async () => {
       APPDOCK_WALLPAPER_FIXTURE: "1",
     });
     hostHash = instance.hash;
+    await instance.app.evaluate(({ shell }) => {
+      const fs = process.getBuiltinModule("node:fs"),
+        path = process.getBuiltinModule("node:path");
+      globalThis.wallpaperEffects = [];
+      const owned = (file) => {
+        if (!path.basename(path.dirname(file)).startsWith("WallpaperFixture-"))
+          throw Error("Only fixture images are accepted");
+      };
+      shell.openPath = async (file) => {
+        owned(file);
+        globalThis.wallpaperEffects.push(["open", file]);
+        await new Promise(
+          (resolve) => (globalThis.wallpaperOpenComplete = resolve),
+        );
+        return "";
+      };
+      shell.trashItem = async (file) => {
+        owned(file);
+        fs.unlinkSync(file);
+        globalThis.wallpaperEffects.push(["trash", file]);
+      };
+    });
     await instance.app.context().addInitScript(observeThumbnails);
     const main = instance.main;
     instance.app
@@ -230,20 +286,21 @@ const previewSize = async () => {
       settings: { historyPageSize: 4 },
     });
     await ready(4);
-    if (longCache) {
-      const cache = path.join(profile, "data/cache/panel-images", manifest.id);
-      const files = fs
-        .readdirSync(cache, { recursive: true })
-        .filter((file) => file.endsWith(".png"))
-        .map((file) => path.join(cache, file));
-      assert(
-        files.length >= 4 && files.every((file) => file.length > 260),
-        "actual decoded PNGs are stored beyond MAX_PATH",
-      );
-      checks.push(
-        "PNG cache paths beyond 260 chars / native stream encoding / real browser decode",
-      );
-    }
+    assert(
+      !fs.existsSync(
+        path.join(profile, "data/cache/panel-images", manifest.id),
+      ),
+    );
+    const localCache = path.join(profile, "LocalAppData");
+    assert(
+      !fs.existsSync(localCache) ||
+        !fs
+          .readdirSync(localCache, { recursive: true })
+          .some((file) => /panel-images.*wallpaper-slideshow/i.test(file)),
+    );
+    checks.push(
+      "history paths and real decoded thumbnails stay in memory / no panel image cache",
+    );
     assert.equal(
       await ui
         .getByRole("button", { name: "前のページ", exact: true })
@@ -266,12 +323,12 @@ const previewSize = async () => {
       async () =>
         (
           await ui.evaluate(() =>
-            window.appletPage.call("actions.invoke", {
-              id: "history.state",
-              input: {},
+            window.appletPage.call("storage.get", {
+              key: "gallery-view",
+              scope: "device",
             }),
           )
-        ).gallery.cardWidth === 340,
+        ).cardWidth === 340,
       "history size persisted",
     );
     assert(await firstCard.evaluate((node) => node === window.retainedCard));
@@ -357,6 +414,16 @@ const previewSize = async () => {
     await ui.getByRole("button", { name: "開く", exact: true }).first().click();
     await until(
       () =>
+        instance.app.evaluate(() =>
+          globalThis.wallpaperEffects.some(
+            ([operation]) => operation === "open",
+          ),
+        ),
+      "fake image open started",
+    );
+    await instance.app.evaluate(() => globalThis.wallpaperOpenComplete());
+    await until(
+      () =>
         ui
           .getByRole("button", { name: "開く", exact: true })
           .first()
@@ -373,8 +440,10 @@ const previewSize = async () => {
     );
     for (const phase of ["loading", "open"]) {
       assert(
-        stability[phase].samples > 0 && stability[phase].disabledSamples > 0,
-        phase + " samples include real in-flight processing",
+        stability[phase].samples > 0 &&
+          (phase !== "open" || stability[phase].disabledSamples > 0),
+        phase +
+          " samples include decoded images and the real in-flight open operation",
       );
       assert.equal(
         stability[phase].minOpacity,
@@ -450,6 +519,91 @@ const previewSize = async () => {
       "standalone width",
     );
     assert.equal(await ui.locator("main").getAttribute("data-marker"), marker);
+    const temporarilyMissing = await ui
+      .locator(".ad-gallery-card")
+      .first()
+      .getAttribute("title");
+    await instance.app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((window) => window.getTitle() === "最近使った壁紙")
+        .close(),
+    );
+    await until(
+      () =>
+        ui.evaluate(
+          () =>
+            window.historyLiveUrls.size === 0 &&
+            document.querySelectorAll(".ad-gallery-image img[src]").length ===
+              0,
+        ),
+      "close releases every thumbnail URL",
+    );
+    fs.renameSync(temporarilyMissing, temporarilyMissing + ".moved");
+    try {
+      await main.evaluate(
+        (id) => window.dock.executeCommand(id + ".history"),
+        manifest.id,
+      );
+      await until(
+        () =>
+          ui
+            .locator(".ad-gallery-card")
+            .count()
+            .then((count) => count === 2),
+        "hidden page reopens",
+      );
+      const missing = ui
+        .locator(".ad-gallery-card")
+        .filter({
+          has: ui.locator("h3", { hasText: path.basename(temporarilyMissing) }),
+        });
+      await until(
+        () =>
+          missing
+            .locator(".ad-gallery-status")
+            .textContent()
+            .then((text) => text.includes("読み込めません")),
+        "missing original is unavailable",
+      );
+      assert.equal(
+        await missing.locator("img[src]").count(),
+        0,
+        "missing source does not reuse the previous thumbnail",
+      );
+    } finally {
+      fs.renameSync(temporarilyMissing + ".moved", temporarilyMissing);
+    }
+    await ui.getByRole("button", { name: "履歴を更新", exact: true }).click();
+    await ready(2);
+    fs.renameSync(temporarilyMissing, temporarilyMissing + ".moved");
+    try {
+      await ui.getByRole("button", { name: "履歴を更新", exact: true }).click();
+      const missing = ui
+        .locator(".ad-gallery-card")
+        .filter({
+          has: ui.locator("h3", { hasText: path.basename(temporarilyMissing) }),
+        });
+      await until(
+        () =>
+          missing
+            .locator(".ad-gallery-status")
+            .textContent()
+            .then((text) => text.includes("読み込めません")),
+        "refresh detects a missing original",
+      );
+      assert.equal(
+        await missing.locator("img[src]").count(),
+        0,
+        "an image read failure clears previously displayed pixels",
+      );
+    } finally {
+      fs.renameSync(temporarilyMissing + ".moved", temporarilyMissing);
+    }
+    await ui.getByRole("button", { name: "履歴を更新", exact: true }).click();
+    await ready(2);
+    checks.push(
+      "Window close releases thumbnail URLs / reopen rereads originals / missing original never reuses old pixels",
+    );
     await instance.save({
       extensionId: manifest.id,
       pages: { history: { display: "page" } },
@@ -620,6 +774,47 @@ const previewSize = async () => {
     );
     console.log(JSON.stringify({ ok: true, profile, checks }));
   } catch (error) {
+    if (ui && !ui.isClosed()) {
+      const diagnostics = await ui
+        .evaluate(async () => {
+          const call = window.appletPage.call;
+          const index = await call("storage.get", {
+            key: "history",
+            scope: "memory",
+          });
+          const key = index?.monitors?.[0]?.chunks?.[0];
+          const values = key
+            ? await call("storage.get", { key, scope: "memory" })
+            : [];
+          let source;
+          try {
+            source = await call("sourceImages.register", {
+              key,
+              pointer: "/0",
+              file: values?.[0],
+            });
+          } catch (error) {
+            source = { error: String(error) };
+          }
+          return {
+            snapshot: await window.appletPage.snapshot(),
+            images: [...document.querySelectorAll(".ad-gallery-image img")].map(
+              (image) => ({
+                width: image.naturalWidth,
+                height: image.naturalHeight,
+                source: image.getAttribute("src"),
+              }),
+            ),
+            fetches: window.historyFetches,
+            source,
+          };
+        })
+        .catch((error) => ({ error: String(error) }));
+      fs.writeFileSync(
+        path.join(profile, "diagnostics.json"),
+        JSON.stringify(diagnostics, null, 2),
+      );
+    }
     if (ui && !ui.isClosed())
       await ui
         .screenshot({ path: path.join(profile, "failure.png") })

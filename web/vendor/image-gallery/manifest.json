@@ -1,12 +1,12 @@
 {
   "apiVersion": 1,
-  "version": "0.109.1",
+  "version": "0.112.2",
   "files": {
-    "image-gallery.js": "9577e18664ee1154ced6f909d4a349d20f94189afa4846ecfc49a4c55d1a9158",
+    "image-gallery.js": "c8d14aa5ebf0c7c5d504ef325aefbdc5e5d02506aa6d7d2074d4a5838c05b295",
     "gallery.css": "65522b267adfd8e6c9c2815c89680b79aeb5fc88656f5d55bf06c8b69382bcec"
   },
   "sources": {
-    "ui/image-gallery/index.ts": "7bb585fa168194cca683a14adba9a5088c1a78f899ec3b361b79ef2f116380a8",
+    "ui/image-gallery/index.ts": "d71265d368b3cd28a99feac512526a2138a75817cc3378c7f23724641102b796",
     "ui/image-gallery/interactions.ts": "db3d2d51e02a060be6f64b472554e1867d6e2fa641a0ddeed3c80d49173a9ede",
     "ui/image-gallery/gallery.css": "65522b267adfd8e6c9c2815c89680b79aeb5fc88656f5d55bf06c8b69382bcec",
     "src/shared/image-gallery.ts": "218b9ab2aefaf5bbfcfc5a25589aaff68e5bdcfa781b11f43ba6c3b626cf23d1"

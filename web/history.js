@@ -4,8 +4,12 @@ import {
   mountGalleryPreview,
   gallerySize,
 } from "./vendor/image-gallery/image-gallery.js";
-("use strict");
+import { HistoryPreferences } from "./history-preferences.js";
+import { MemoryImages } from "./memory-images.js";
+
 const bridge = window.appletPage;
+const call = (operation, input = {}) => bridge.call(operation, input);
+const memory = (key) => call("storage.get", { key, scope: "memory" });
 const $ = (id) => document.getElementById(id);
 const paths = {
   back: "M19 12H5m6-6-6 6 6 6",
@@ -15,9 +19,6 @@ const paths = {
     "M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1",
   monitor: "M4 4h16v12H4zM8 20h8m-4-4v4",
   close: "m6 6 12 12M18 6 6 18",
-  image: "M3 4h18v16H3zM3 16l5-5 5 5 3-3 5 5M16 8h.01",
-  open: "M14 3h7v7m0-7L10 14M10 3H4v17h17v-6",
-  trash: "M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7",
 };
 function icon(name) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -30,54 +31,73 @@ function icon(name) {
 }
 document
   .querySelectorAll("[data-icon]")
-  .forEach((element) => element.replaceWith(icon(element.dataset.icon)));
+  .forEach((node) => node.replaceWith(icon(node.dataset.icon)));
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (text != null) node.textContent = text;
   return node;
 }
-const action = (id, input = {}) => bridge.call("actions.invoke", { id, input });
 let model,
-  settings,
-  generationNumber = 0,
-  intent,
+  settings = {},
+  visible = false,
   processing = false,
   refreshQueued = false,
-  deferred = false,
   actionBusy = false;
-let confirmationToken, dialogFocus;
-const positions = new Map();
+let intent,
+  deferred = false,
+  forceImages = false,
+  generationNumber = 0,
+  confirmationToken,
+  dialogFocus;
 let cardWidth = gallerySize.initial,
   sizeLoaded = false,
   sizeTouched = false,
   widthSave = Promise.resolve();
-const imageId = (item) => `${model.generation}:${item.slot}`;
-const assetId = (item) => `${imageId(item)}:${item.image || ""}`;
+let positionsLoaded = false,
+  selectedMonitor = 0,
+  savedPositions = "";
+const positions = new Map();
+const preferences = new HistoryPreferences(call);
+const imageId = (item) => item.id;
+const assetId = (item) =>
+  JSON.stringify([
+    item.path,
+    settings.thumbnailWidth ?? 480,
+    settings.thumbnailHeight ?? 360,
+    images.epoch,
+  ]);
 const itemFor = (id) => model?.items.find((item) => imageId(item) === id);
-const preview = mountGalleryPreview($("preview-content"), {
-  image: async (id) => {
-    const item = model?.items.find((item) => assetId(item) === id);
-    if (!item?.image) throw Error("画像を読み込めません");
-    return item.image;
+const images = new MemoryImages(
+  call,
+  () => visible && !!model,
+  (item) => {
+    if (model?.items.includes(item)) renderCards();
+    if (item.status === "error") changed();
   },
-});
+);
+const imageFor = async (id) => {
+  const item = model?.items.find((item) => assetId(item) === id);
+  if (!item) throw Error("画像を読み込めません");
+  return images.image(
+    item,
+    settings.thumbnailWidth ?? 480,
+    settings.thumbnailHeight ?? 360,
+  );
+};
+const preview = mountGalleryPreview($("preview-content"), { image: imageFor });
 const gallery = mountImageGallery($("cards"), {
   scrollElement: document.documentElement,
-  image: async (id) => {
-    const item = model?.items.find((item) => assetId(item) === id);
-    if (!item?.image) throw Error("画像を読み込めません");
-    return item.image;
-  },
+  image: imageFor,
   select: () => {},
   activate: (id) => {
     const item = itemFor(id);
-    if (!item?.image || processing || actionBusy) return;
+    if (!item || item.status !== "ready" || processing || actionBusy) return;
     dialogFocus = document.activeElement;
     preview.setModel({
       assetId: assetId(item),
       title: item.title,
-      detail: item.tooltip,
+      detail: item.path,
       labels: [],
       state: "ready",
     });
@@ -86,20 +106,17 @@ const gallery = mountImageGallery($("cards"), {
   action: (id, command) => {
     const item = itemFor(id);
     if (!item || !model) return;
-    const generation = model.generation;
     const focus = document.activeElement;
     if (command === "open")
-      void operate(() =>
-        action("history.open", { generation, slot: item.slot }),
-      );
+      void operate(async () => {
+        const source = await images.source(item);
+        await call("sourceImages.open", { id: source.id });
+      });
     else if (command === "delete")
       void operate(async () => {
-        const response = await action("history.delete-request", {
-          generation,
-          slot: item.slot,
-        });
-        confirmationToken = response.confirmationToken;
-        $("delete-path").textContent = response.path;
+        const source = await images.source(item);
+        confirmationToken = { source, path: item.path };
+        $("delete-path").textContent = item.path;
         dialogFocus = focus;
         $("delete-dialog").showModal();
       });
@@ -116,12 +133,11 @@ function renderCards() {
       id: imageId(item),
       assetId: assetId(item),
       title: item.title,
-      description: item.tooltip,
+      description: item.path,
       detail:
-        item.status === "loading"
-          ? "画像を準備しています"
-          : [item.resolution, item.sizeText].filter(Boolean).join(" · ") ||
-            item.error,
+        [item.resolution, item.sizeText].filter(Boolean).join(" · ") ||
+        item.error ||
+        "画像を準備しています",
       labels: [],
       state: item.status,
       selectable: !processing && !actionBusy,
@@ -146,7 +162,7 @@ function saveWidth(value) {
     .catch(() => {})
     .then(async () => {
       try {
-        await action("history.gallery-size", { cardWidth: value });
+        await preferences.save(value);
         sizeError("");
       } catch (error) {
         sizeError(String(error?.message || error));
@@ -162,6 +178,7 @@ const sizeControl = mountGallerySizeControl($("gallery-size"), {
   },
   commit: saveWidth,
 });
+$("gallery-size").querySelector('input[type="range"]').min = "180";
 function showError(error) {
   $("error").textContent = String(error?.message || error).replace(
     /^Error invoking remote method '[^']+': (?:Error: )?/,
@@ -178,38 +195,68 @@ function busy() {
     actionBusy ||
     !model ||
     (model.page + 1) * model.pageSize >= model.total;
-  $("cards").setAttribute("aria-busy", String(processing || !!model?.loading));
+  $("cards").setAttribute("aria-busy", String(processing));
 }
-async function applyTheme() {
-  const snapshot = await bridge.snapshot();
-  document.documentElement.classList.toggle("dark", snapshot.dark);
-}
-function requestPage(monitor, page, fresh = true) {
-  intent = { monitor, page, fresh };
+function requestPage(monitor, page, refresh = false) {
+  intent = { monitor, page };
   generationNumber++;
-  refreshQueued = true;
-  void drain();
+  forceImages ||= refresh;
+  changed();
 }
 function changed() {
   refreshQueued = true;
-  void drain();
+  if (visible) void drain();
 }
-async function release(generation) {
-  if (!generation) return;
-  try {
-    await action("history.release", { generation });
-  } catch {
-    /* A disposed View is already revoked by the host. */
+async function readItems(index, monitor, page, pageSize) {
+  const previous = new Map(model?.items.map((item) => [item.path, item]) ?? []);
+  const meta = index?.monitors?.[monitor] ?? { count: 0, chunks: [] };
+  const start = page * pageSize,
+    end = start + pageSize;
+  const result = [];
+  let offset = 0;
+  const duplicates = new Map();
+  for (const key of meta.chunks) {
+    const paths = await memory(key);
+    if (!Array.isArray(paths)) {
+      if ((await memory("history"))?.generation !== index.generation)
+        return null;
+      throw Error("履歴を更新してください。");
+    }
+    paths.forEach((path, position) => {
+      const slot = offset + position;
+      if (slot < start || slot >= end) return;
+      const occurrence = duplicates.get(path) ?? 0;
+      duplicates.set(path, occurrence + 1);
+      const name = path.split(/[\\/]/).at(-1),
+        maximum = settings.maxFileNameLength ?? 30;
+      const old = previous.get(path);
+      result.push({
+        id: JSON.stringify([monitor, path, occurrence]),
+        path,
+        storageKey: key,
+        pointer: `/${position}`,
+        title: name.length > maximum ? name.slice(0, maximum) + "…" : name,
+        status:
+          old?.status === "error" && model.generation !== index.generation
+            ? "ready"
+            : (old?.status ?? "ready"),
+        resolution: old?.resolution ?? "",
+        sizeText: old?.sizeText ?? "",
+        error: old?.error ?? "",
+      });
+    });
+    offset += paths.length;
+    if (offset >= end) break;
   }
+  return result;
 }
 async function drain() {
-  if (processing || actionBusy) return;
+  if (processing || actionBusy || !visible) return;
   processing = true;
   busy();
   try {
-    while (refreshQueued && !actionBusy) {
+    while (refreshQueued && visible && !actionBusy) {
       refreshQueued = false;
-      await applyTheme();
       if ($("preview").open || $("delete-dialog").open) {
         deferred = true;
         break;
@@ -217,59 +264,106 @@ async function drain() {
       const wanted = intent;
       intent = undefined;
       const request = generationNumber;
-      settings = await action("history.state");
+      const snapshot = await bridge.snapshot();
+      if (!visible || request !== generationNumber) continue;
+      document.documentElement.classList.toggle("dark", snapshot.dark);
+      const previousSize = JSON.stringify([
+        settings.thumbnailWidth,
+        settings.thumbnailHeight,
+      ]);
+      settings = snapshot.settings;
       if (!sizeLoaded) {
+        const view = await preferences.read();
         sizeLoaded = true;
         if (!sizeTouched) {
-          cardWidth = settings.gallery?.cardWidth ?? gallerySize.initial;
+          cardWidth = view.cardWidth;
           sizeControl.setValue(cardWidth);
         }
-        sizeError(settings.gallery?.error || "");
+        sizeError(view.error);
       }
-      for (const [monitor, page] of Object.entries(settings.positions || {}))
-        positions.set(Number(monitor), page);
-      const monitor = wanted?.monitor ?? model?.monitor ?? settings.monitor;
-      const page = wanted?.page ?? model?.page ?? settings.page;
-      const fresh =
-        wanted?.fresh ||
-        !model ||
-        model.contentRevision !== settings.revision ||
-        model.pageSize !== settings.pageSize ||
-        monitor >= Math.max(1, settings.monitorCount);
-      let generation = fresh ? "" : model.generation,
-        offset = 0,
-        result;
-      const items = [];
-      do {
-        result = await action("history.read", {
-          monitor,
-          page,
-          offset,
-          limit: 32,
-          generation,
-        });
-        generation = result.generation;
-        if (request !== generationNumber) break;
-        items.push(...result.items);
-        offset = result.nextOffset;
-      } while (offset !== null);
-      if (request !== generationNumber) {
-        if (generation !== model?.generation) await release(generation);
+      if (!positionsLoaded) {
+        const view = await memory("history-view");
+        positionsLoaded = true;
+        if (view) {
+          selectedMonitor = Number.isInteger(view.monitor) ? view.monitor : 0;
+          for (const [key, value] of Object.entries(view.positions ?? {}))
+            if (Number.isInteger(value) && value >= 0)
+              positions.set(Number(key), value);
+        }
+      }
+      const index = await memory("history");
+      const signature = JSON.stringify([
+        settings.historyPageSize,
+        settings.maxFileNameLength,
+        settings.thumbnailWidth,
+        settings.thumbnailHeight,
+        settings.historyLimit,
+      ]);
+      if (
+        !wanted &&
+        !forceImages &&
+        model?.generation === index?.generation &&
+        model.signature === signature
+      )
+        continue;
+      const monitorCount = index?.monitors?.length ?? 0;
+      const monitor = Math.min(
+        Math.max(0, wanted?.monitor ?? model?.monitor ?? selectedMonitor),
+        Math.max(0, monitorCount - 1),
+      );
+      const pageSize = settings.historyPageSize ?? 4,
+        total = index?.monitors?.[monitor]?.count ?? 0;
+      const page = Math.min(
+        Math.max(0, wanted?.page ?? positions.get(monitor) ?? 0),
+        Math.max(0, Math.ceil(total / pageSize) - 1),
+      );
+      if (
+        forceImages ||
+        previousSize !==
+          JSON.stringify([settings.thumbnailWidth, settings.thumbnailHeight])
+      ) {
+        images.clear();
+        model = undefined;
+        forceImages = false;
+      }
+      const items = await readItems(index, monitor, page, pageSize);
+      if (items === null) {
+        refreshQueued = true;
         continue;
       }
-      const previous = model?.generation;
-      model = { ...result, items };
-      positions.set(model.monitor, model.page);
+      if (!visible || request !== generationNumber) continue;
+      model = {
+        items,
+        signature,
+        generation: index?.generation ?? "empty",
+        monitor,
+        monitorCount,
+        page,
+        pageSize,
+        total,
+      };
+      positions.set(monitor, page);
+      selectedMonitor = monitor;
+      images.retain(new Set(items.map((item) => item.path)));
       render();
-      if (previous && previous !== model.generation) await release(previous);
+      const view = { monitor, positions: Object.fromEntries(positions) };
+      const encoded = JSON.stringify(view);
+      if (encoded !== savedPositions) {
+        savedPositions = encoded;
+        await call("storage.set", {
+          key: "history-view",
+          scope: "memory",
+          value: view,
+        });
+      }
     }
   } catch (error) {
-    showError(error);
+    if (visible) showError(error);
   } finally {
     processing = false;
     busy();
   }
-  if (refreshQueued && !actionBusy) void drain();
+  if (refreshQueued && visible && !actionBusy) void drain();
 }
 function renderMonitors() {
   const count = Math.max(1, model.monitorCount);
@@ -322,7 +416,7 @@ function render() {
   $("page-number").textContent = model.total
     ? `${model.page + 1} / ${Math.ceil(model.total / model.pageSize)}`
     : "0 / 0";
-  $("loading").hidden = !model.loading;
+  $("loading").hidden = true;
   $("cards").hidden = model.total === 0;
   $("empty").hidden = model.total !== 0;
   $("empty-title").textContent =
@@ -343,7 +437,7 @@ async function operate(callback) {
   try {
     await callback();
   } catch (error) {
-    showError(error);
+    if (visible) showError(error);
   } finally {
     actionBusy = false;
     busy();
@@ -392,41 +486,33 @@ $("preview").addEventListener("click", (event) => {
     finishDialog("preview");
   previewBackdropPressed = false;
 });
-async function cancelDelete() {
-  if (actionBusy) return;
-  await operate(async () => {
-    const token = confirmationToken;
+function cancelDelete() {
+  if (!actionBusy) {
     confirmationToken = undefined;
-    try {
-      if (token)
-        await action("history.delete-cancel", { confirmationToken: token });
-    } finally {
-      finishDialog("delete-dialog");
-    }
-  });
-  changed();
+    finishDialog("delete-dialog");
+  }
 }
-$("delete-cancel").addEventListener("click", () => void cancelDelete());
+$("delete-cancel").addEventListener("click", cancelDelete);
 $("delete-dialog").addEventListener("cancel", (event) => {
   event.preventDefault();
-  void cancelDelete();
+  cancelDelete();
 });
 $("delete-confirm").addEventListener(
   "click",
   () =>
     void operate(async () => {
-      const token = confirmationToken;
-      if (!token) return;
+      const pending = confirmationToken;
+      if (!pending) return;
       confirmationToken = undefined;
       $("delete-confirm").disabled = true;
       $("delete-cancel").disabled = true;
       try {
-        await action("history.delete-confirm", { confirmationToken: token });
+        await call("sourceImages.trash", { id: pending.source.id });
       } finally {
         finishDialog("delete-dialog");
         $("delete-confirm").disabled = false;
         $("delete-cancel").disabled = false;
-        if (model) requestPage(model.monitor, model.page);
+        if (model) requestPage(model.monitor, model.page, true);
       }
     }),
 );
@@ -438,28 +524,58 @@ $("next").addEventListener("click", () =>
 );
 $("refresh").addEventListener("click", () => {
   $("error").hidden = true;
-  requestPage(model?.monitor ?? 0, model?.page ?? 0);
+  requestPage(model?.monitor ?? 0, model?.page ?? 0, true);
 });
 $("home").addEventListener(
   "click",
   () =>
-    void operate(async () => {
-      await bridge.executeCommand("at365.wallpaper-slideshow.home");
-    }),
+    void operate(() => bridge.executeCommand("at365.wallpaper-slideshow.home")),
 );
+function visibility(value) {
+  if (visible === value) return;
+  visible = value;
+  generationNumber++;
+  if (visible) {
+    changed();
+    return;
+  }
+  confirmationToken = undefined;
+  if ($("delete-dialog").open) $("delete-dialog").close();
+  if ($("preview").open) $("preview").close();
+  preview.setModel({
+    assetId: "",
+    title: "",
+    detail: "",
+    labels: [],
+    state: "missing",
+  });
+  images.clear();
+  model = undefined;
+  gallery.setModel({
+    cardWidth,
+    fit: "cover",
+    selection: "none",
+    empty: "",
+    items: [],
+  });
+}
 if (bridge) {
   const unsubscribe = bridge.onChanged(changed);
+  const unsubscribeVisibility = bridge.onVisibilityChanged(visibility);
   window.addEventListener(
     "unload",
     () => {
+      visible = false;
+      images.clear();
       unsubscribe();
+      unsubscribeVisibility();
       gallery.dispose();
       preview.dispose();
       sizeControl.dispose();
     },
     { once: true },
   );
-  changed();
+  void bridge.snapshot().then((snapshot) => visibility(snapshot.visible));
 } else {
   $("cards").setAttribute("aria-busy", "false");
   showError("AppDockからこのページを開いてください。");

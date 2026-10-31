@@ -9,7 +9,7 @@
 - エラーは既存のホスト`IExtensionContext.Log`へ送り、AppDockの全体ログとApplet詳細のログに表示する。独自errors.logは作成・追記しない。既存ファイルは保持する。同期のエンジンからは上限付きキューで直列送信し、重複抑制・通信失敗時のstderr・停止処理後の短い排出待ちを維持する。共通APIは[Applet API](../AppDock.at365/docs/extensions.md)を参照する。
 - 表示中Bitmapの所有権はDesktopPresenterへ移し、交換・停止・終了時に解放する。通常回帰はfakeの接続先を使い、実Explorerへの接続は明示的な対話試験に限定する。接続失敗時に旧壁紙方式へ退避しない。
 - Windowsのセッション終了は非表示DispatcherFormのWM_ENDSESSION（wParam=true）内で同期的にengine.Stopへ渡す。WM_QUERYENDSESSIONは許可だけを返し、取消で壁紙/再生を変えない。通常deactivateと同じStopEngineで二重実行を防ぐ。Appletの終了優先度は0x2ffとし、デフォルト0x280の親ホストより先にクリーンアップする。実OS終了と、限定HWNDへのメッセージ/壁紙API fakeによる試験の範囲を区別する。
-- 設定はホストSettingsへ保存する。今後追加する共有素材やホスト管理の端末固有状態は[ホストの保存境界](../AppDock.at365/docs/settings-sync.md)に従う。履歴サムネイルはホストが渡すPC専用imageDirectoryを使う。
+- 設定はホストSettingsへ保存する。今後追加する共有素材やホスト管理の端末固有状態は[ホストの保存境界](../AppDock.at365/docs/settings-sync.md)に従う。履歴パスはStorageのMemory scopeで渡し、履歴画像はJSページの表示中だけ保持する。履歴JSONやサムネイルをファイル保存しない。
 - 回帰とRPC fixtureではユーザーの壁紙・設定・画像を変更しない。背面表示はfakeで検証し、公開EXEの通常RPC smokeは不正設定を拒否させて正常終了を確認する。`test-memory-native.cjs`だけは隔離プロセスの実背面表示・自身のHWND閉鎖による復旧を明示的に確認する。Explorer本体の再起動や実ロック/RDPは別途実行範囲を確認する。
 - GUI試験は直列で行い、実行中にホストのoutやpublishを再ビルドしない。作業完了時のテストフォルダー整理は[ホスト開発ガイド](../AppDock.at365/DEVELOPMENT.md#作業完了時のテストフォルダー整理)に従う。
 

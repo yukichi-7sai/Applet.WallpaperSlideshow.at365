@@ -105,6 +105,7 @@ public sealed class WallpaperController : IDisposable
         if (presenter?.Present(result) != true) return;
         foreach (var item in result.History)
             HistoryManager.Instance.Push(item.Monitor, item.Path, result.HistoryLimit);
+        StateChanged?.Invoke();
     }
 
     public void Dispose()

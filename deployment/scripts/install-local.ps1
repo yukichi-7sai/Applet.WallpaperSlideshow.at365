@@ -11,13 +11,13 @@ if (-not (Test-Path -LiteralPath (Join-Path $taskHostDirectory 'AppDock.at365.ex
 $taskDestination = Join-Path $taskHostDirectory 'extensions\Applet.WallpaperSlideshow.at365'
 $taskSource = Join-Path $taskAppletRoot 'Applet.WallpaperSlideshow.at365'
 if (-not (Test-Path -LiteralPath (Join-Path $taskSource 'Applet.WallpaperSlideshow.at365.exe') -PathType Leaf)) { throw '先にscripts\publish.ps1でビルドしてください。' }
-foreach ($taskWebAsset in @('history.html', 'history.js', 'history.css', 'vendor\image-gallery\image-gallery.js', 'vendor\image-gallery\gallery.css', 'vendor\image-gallery\manifest.json')) {
+foreach ($taskWebAsset in @('history.html', 'history.js', 'history-preferences.js', 'memory-images.js', 'history.css', 'vendor\image-gallery\image-gallery.js', 'vendor\image-gallery\gallery.css', 'vendor\image-gallery\manifest.json')) {
     if (-not (Test-Path -LiteralPath (Join-Path $taskSource ('web\' + $taskWebAsset)) -PathType Leaf)) { throw "Missing page asset: $taskWebAsset" }
 }
 New-Item -ItemType Directory -Path $taskDestination -Force | Out-Null
 foreach ($taskFile in @('Applet.WallpaperSlideshow.at365.exe', 'extension.json')) { Copy-Item -LiteralPath (Join-Path $taskSource $taskFile) -Destination (Join-Path $taskDestination $taskFile) -Force }
 New-Item -ItemType Directory -Path (Join-Path $taskDestination 'web\vendor\image-gallery') -Force | Out-Null
-foreach ($taskWebAsset in @('history.html', 'history.js', 'history.css', 'vendor\image-gallery\image-gallery.js', 'vendor\image-gallery\gallery.css', 'vendor\image-gallery\manifest.json')) {
+foreach ($taskWebAsset in @('history.html', 'history.js', 'history-preferences.js', 'memory-images.js', 'history.css', 'vendor\image-gallery\image-gallery.js', 'vendor\image-gallery\gallery.css', 'vendor\image-gallery\manifest.json')) {
     Copy-Item -LiteralPath (Join-Path $taskSource ('web\' + $taskWebAsset)) -Destination (Join-Path $taskDestination ('web\' + $taskWebAsset)) -Force
 }
 Write-Output "Appletを配置しました: $taskDestination"

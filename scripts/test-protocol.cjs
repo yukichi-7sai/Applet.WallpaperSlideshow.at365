@@ -2,60 +2,48 @@ const {
   getPublishDirectory,
 } = require("../../AppDock.at365/scripts/publish-paths.cjs");
 const { spawn, execFileSync } = require("node:child_process");
-const fs = require("node:fs");
-const path = require("node:path");
-const assert = require("node:assert/strict");
-const root = path.resolve(__dirname, "..");
-const host = path.resolve(root, "../AppDock.at365");
+const fs = require("node:fs"),
+  path = require("node:path"),
+  assert = require("node:assert/strict");
+const root = path.resolve(__dirname, ".."),
+  host = path.resolve(root, "../AppDock.at365");
 const { JsonLinePeer } = require(path.join(host, "out/main/main/core/rpc.js"));
 const fixture = path.join(
   root,
   "Applet.WallpaperSlideshow.RegressionTests/bin/Release/net10.0-windows/Applet.WallpaperSlideshow.RegressionTests.exe",
 );
-
 (async () => {
-  const settings = {};
-  const setPause = async (value) => {
-    settings.paused = value;
-    await peer.request("settings.changed", { ...settings });
-  };
-  const imageDirectory = fs.mkdtempSync(
-    path.join(
-      root,
-      ".artifacts",
-      "protocol-images-" +
-        (process.argv.includes("--long-cache") ? "x".repeat(100) + "-" : ""),
-    ),
-  );
-  if (process.argv.includes("--long-cache"))
-    assert(
-      path.join(imageDirectory, ...Array(3).fill("x".repeat(32))).length > 260,
-    );
+  const values = new Map(),
+    logs = [],
+    calls = [];
   let panel,
-    diagnostics = "",
     pageOpened = false,
     detailsOpened = false,
-    rejectImages = false,
-    rejectedRegistrations = 0;
-  const registered = new Map();
-  const storage = new Map();
-  const logs = [];
+    diagnostics = "",
+    stopped = false,
+    failHistoryIndex = null;
   const child = spawn(fixture, ["--protocol-fixture"], {
     windowsHide: true,
     stdio: ["pipe", "pipe", "pipe"],
   });
-  child.stderr.on("data", (data) => {
-    diagnostics += data;
+  child.stderr.on("data", (data) => (diagnostics += data));
+  const exited = new Promise((resolve, reject) => {
+    child.on("error", reject);
+    child.on("exit", resolve);
   });
   const peer = new JsonLinePeer(
     child.stdout,
     child.stdin,
     async (method, params) => {
+      calls.push(method);
       if (method === "host.ui.panel") {
         panel = params;
         return null;
       }
-      if (method === "host.ui.imageDirectory") return imageDirectory;
+      if (method === "host.log") {
+        logs.push(params);
+        return null;
+      }
       if (method === "host.pages.open") {
         assert.equal(params.id, "history");
         pageOpened = true;
@@ -65,79 +53,42 @@ const fixture = path.join(
         detailsOpened = true;
         return null;
       }
-      if (method === "host.pages.dispose") {
-        registered.clear();
-        return null;
-      }
-      if (method === "host.pages.changed")
-        return { accepted: true, delivered: true };
-      if (method === "host.pages.images.register" && rejectImages) {
-        rejectedRegistrations++;
-        throw Error("Fixture View disposed");
-      }
-      if (method === "host.pages.images.register")
-        return {
-          images: params.files.map((item) => {
-            assert(!path.relative(imageDirectory, item.file).startsWith(".."));
-            assert(fs.existsSync(item.file));
-            const id = require("node:crypto").randomUUID();
-            registered.set(id, item.file);
-            return { key: item.key, id, url: "appdock://page-images/" + id };
-          }),
-        };
-      if (method === "host.pages.images.release") {
-        params.imageIds.forEach((id) => registered.delete(id));
-        return null;
-      }
-      if (method === "host.settings.set") {
-        settings[params.key] = params.value;
-        return null;
-      }
-      if (method === "host.storage.get") return storage.get(params.key) ?? null;
+      if (method === "host.pages.dispose") return null;
       if (method === "host.storage.set") {
-        storage.set(params.key, params.value);
+        assert.equal(
+          params.scope,
+          "memory",
+          "native history writes only memory Storage",
+        );
+        assert(Buffer.byteLength(JSON.stringify(params)) < 256 * 1024);
+        if (params.key === "history" && failHistoryIndex === "before") {
+          failHistoryIndex = null;
+          throw Error("fixture publication rejected");
+        }
+        if (params.value == null) values.delete(params.key);
+        else values.set(params.key, params.value);
+        if (params.key === "history" && failHistoryIndex === "after") {
+          failHistoryIndex = null;
+          throw Error("fixture publication receipt lost");
+        }
         return null;
       }
-      if (method === "host.log") {
-        logs.push(params);
-        return null;
-      }
-      throw new Error("Unexpected API " + method);
+      throw Error("Unexpected native API " + method);
     },
   );
-  const exited = new Promise((resolve, reject) => {
-    child.on("error", reject);
-    child.on("exit", (code) => resolve(code));
-  });
-  let deactivated = false;
-  const pageAction = (id, input = {}) =>
-    peer.request("page.action", { id, input, pageId: "history" });
-  const readyPage = async (monitor, page) => {
-    let value = await pageAction("history.read", {
-      monitor,
-      page,
-      offset: 0,
-      limit: 32,
-      generation: "",
-    });
-    const until = Date.now() + 10000;
-    while (value.loading && Date.now() < until) {
-      await new Promise((resolve) => setTimeout(resolve, 15));
-      value = await pageAction("history.read", {
-        monitor,
-        page,
-        offset: 0,
-        limit: 32,
-        generation: value.generation,
-      });
-    }
-    assert.equal(value.loading, false, "thumbnail worker completed");
-    return value;
+  const settings = {};
+  const configure = async (change) => {
+    Object.assign(settings, change);
+    await peer.request("settings.changed", settings);
   };
-  const imageFiles = (value) =>
-    value.items
-      .filter((item) => item.image)
-      .map((item) => registered.get(item.image.split("/").at(-1)));
+  const paths = (monitor) =>
+    values
+      .get("history")
+      .monitors[monitor].chunks.flatMap((key) => values.get(key));
+  const command = (suffix) =>
+    peer.request("command.execute", {
+      id: "at365.wallpaper-slideshow." + suffix,
+    });
   try {
     const result = await peer.request("activate", {
       id: "at365.wallpaper-slideshow",
@@ -146,287 +97,134 @@ const fixture = path.join(
     assert.equal(result.tray.length, 0);
     assert.equal(result.commands.length, 5);
     assert(
-      !result.commands.some((c) => /\.(start|stop|toggle|resume)$/.test(c.id)),
-    );
-    assert.equal(
-      result.commands.some((command) => command.id.endsWith(".resume")),
-      false,
-    );
-    assert(
-      result.commands.some((c) => c.id === "at365.wallpaper-slideshow.next"),
-    );
-    assert.deepEqual(
-      panel.actions.slice(0, 3).map((a) => a.command),
-      ["off", "on", "toggle"].map(
-        (a) => "at365.wallpaper-slideshow.settings.paused." + a,
+      !result.commands.some((command) =>
+        /\.(resume|history\.previous|history\.next)$/.test(command.id),
       ),
     );
     assert.deepEqual(
-      panel.actions.slice(0, 4).map((action) => action.title),
-      ["開始／再開", "停止", "開始／停止を切り替え", "次の壁紙に更新"],
+      panel.actions.slice(0, 3).map((action) => action.command),
+      ["off", "on", "toggle"].map(
+        (value) => "at365.wallpaper-slideshow.settings.paused." + value,
+      ),
     );
     assert.equal(
       panel.facts.find((fact) => fact.label === "状態").value,
       "表示中",
     );
-    await setPause(true);
-    assert.equal(settings.paused, true);
-    assert(
-      !result.commands.some((c) => c.id.endsWith(".prepare-background")),
-      "wallpaper-changing command removed",
-    );
-    await assert.rejects(
-      peer.request("command.execute", {
-        id: "at365.wallpaper-slideshow.prepare-background",
-      }),
-    );
-    assert.equal(
-      settings.paused,
-      true,
-      "obsolete command cannot affect playback",
-    );
-    await peer.request("command.execute", {
-      id: "at365.wallpaper-slideshow.background-settings",
-    });
-    assert.equal(settings.paused, true);
-    await peer.request("command.execute", {
-      id: "at365.wallpaper-slideshow.next",
-    });
-    assert.equal(diagnostics.includes("FIXTURE_NEXT_WALLPAPER"), false);
-    await setPause(false);
-    assert.equal(settings.paused, false);
-    await peer.request("command.execute", {
-      id: "at365.wallpaper-slideshow.next",
-    });
-    for (
-      let attempt = 0;
-      attempt < 50 && !diagnostics.includes("FIXTURE_NEXT_WALLPAPER");
-      attempt++
-    )
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    assert.equal(diagnostics.split("FIXTURE_NEXT_WALLPAPER").length - 1, 1);
-    await setPause(!settings.paused);
-    assert.equal(settings.paused, true);
-    await setPause(!settings.paused);
-    assert.equal(settings.paused, false);
-    await setPause(true);
-    assert.equal(settings.paused, true);
+    await configure({ paused: true });
+    await command("next");
+    assert(!diagnostics.includes("FIXTURE_NEXT_WALLPAPER"));
+    await configure({ paused: false });
+    await command("next");
+    await configure({ paused: true });
     assert.match(
       panel.facts.find((fact) => fact.label === "状態").value,
       /停止中/,
     );
-    await setPause(false);
-    assert.equal(settings.paused, false);
-    await peer.request("settings.changed", { intervalSeconds: 7 });
+    await configure({ intervalSeconds: 7 });
     assert.equal(
       panel.facts.find((fact) => fact.label === "更新間隔").value,
       "7 秒",
     );
-    settings.intervalSeconds = 0;
-    await peer.request("settings.changed", { ...settings });
+    await configure({ intervalSeconds: 0 });
     assert.match(panel.description, /設定エラー/);
     assert.equal(
       panel.facts.find((fact) => fact.label === "更新間隔").value,
       "7 秒",
     );
-    await setPause(true);
-    assert.equal(settings.paused, true);
-    assert.match(
-      panel.facts.find((fact) => fact.label === "状態").value,
-      /停止中/,
-    );
-    await setPause(false);
-    assert.equal(settings.paused, false);
-    assert.equal(
-      panel.facts.find((fact) => fact.label === "状態").value,
-      "表示中",
-    );
-    await peer.request("command.execute", {
-      id: "at365.wallpaper-slideshow.history",
-    });
-    assert.equal(pageOpened, true);
-    assert.equal((await pageAction("history.state")).gallery.cardWidth, 260);
-    assert.equal(
-      storage.size,
-      0,
-      "opening history does not create preference data",
-    );
-    const settingsBeforeSize = structuredClone(settings);
-    await pageAction("history.gallery-size", { cardWidth: 340 });
-    assert.equal((await pageAction("history.state")).gallery.cardWidth, 340);
-    assert.deepEqual(storage.get("gallery-view"), {
-      schemaVersion: 1,
-      cardWidth: 340,
-    });
-    for (const cardWidth of [0, 181, 380])
-      await assert.rejects(pageAction("history.gallery-size", { cardWidth }));
-    assert.deepEqual(
-      settings,
-      settingsBeforeSize,
-      "display size is independent from thumbnail and slideshow settings",
-    );
+    await configure({ intervalSeconds: 7 });
+    await assert.rejects(command("prepare-background"));
+    await command("background-settings");
+    await command("history");
+    assert(pageOpened);
     assert.equal(panel.images, null);
     assert.equal(panel.tabs, null);
-    assert(!panel.actions.some((item) => item.command.endsWith(".history")));
-    for (const suffix of ["history.previous", "history.next"])
-      await assert.rejects(
-        peer.request("command.execute", {
-          id: "at365.wallpaper-slideshow." + suffix,
-        }),
-        /Unknown command/,
-      );
-    let first = await readyPage(0, 0);
+    assert.equal(values.get("history").schemaVersion, 1);
+    assert.equal(paths(0).length, 7);
+    assert.equal(paths(1).length, 1);
+    assert.match(paths(0)[0], /image6\.png$/);
     assert(
-      first.items.every((item) => item.status === "ready" && item.image),
-      "thumbnail generation failed: " +
-        JSON.stringify(
-          logs.filter((entry) => entry.message.includes("履歴画像")),
-        ),
+      paths(0).every((file) => typeof file === "string" && fs.existsSync(file)),
     );
-    assert.equal(first.items.length, 4);
-    assert.match(first.items[0].title, /image6/);
-    const firstFiles = imageFiles(first);
-    assert.equal(firstFiles.length, 4);
-    let second = await readyPage(1, 0);
-    assert.equal(second.items.length, 1);
-    assert.match(second.items[0].title, /image3/);
-    await pageAction("history.release", { generation: first.generation });
     assert(
-      firstFiles.every((file) => !fs.existsSync(file)),
-      "retired thumbnails released",
+      !calls.some((method) =>
+        /imageDirectory|images\.register|images\.release/.test(method),
+      ),
+      "native never loads or saves history pixels",
     );
     await assert.rejects(
-      pageAction("history.delete-request", {
-        generation: first.generation,
-        slot: 0,
+      peer.request("page.action", {
+        id: "history.read",
+        input: {},
+        pageId: "history",
       }),
-      /更新/,
+      /提供されていません/,
     );
-    let page = await readyPage(0, 1);
-    await pageAction("history.release", { generation: second.generation });
-    assert.equal(page.items.length, 3);
-    assert.match(page.items[0].title, /image2/);
-    assert(
-      fs.statSync(imageFiles(page).at(-1)).size > 200000,
-      "PNG quality has no RPC byte cap",
+    const shared = paths(1)[0];
+    fs.unlinkSync(shared);
+    await peer.request("page.fileRemoved", { pageId: "history", file: shared });
+    assert.equal(paths(1).length, 0);
+    assert(!paths(0).includes(shared));
+    const beforeFailure = structuredClone(values.get("history"));
+    failHistoryIndex = "before";
+    await configure({ historyLimit: 5 });
+    assert.deepEqual(
+      values.get("history"),
+      beforeFailure,
+      "a rejected publication preserves the previous index",
     );
-    await pageAction("history.open", { generation: page.generation, slot: 0 });
-    let pending = await pageAction("history.delete-request", {
-      generation: page.generation,
-      slot: 0,
-    });
-    const victim = pending.path;
-    assert(fs.existsSync(victim));
-    await pageAction("history.delete-cancel", {
-      confirmationToken: pending.confirmationToken,
-    });
-    assert(fs.existsSync(victim));
-    pending = await pageAction("history.delete-request", {
-      generation: page.generation,
-      slot: 0,
-    });
-    await pageAction("history.delete-confirm", {
-      confirmationToken: pending.confirmationToken,
-    });
-    assert.equal(fs.existsSync(victim), false);
-    await assert.rejects(
-      pageAction("history.delete-confirm", {
-        confirmationToken: pending.confirmationToken,
-      }),
-      /選び直/,
-    );
-    page = await readyPage(0, 1);
-    assert.equal(page.items.length, 2);
-    assert.match(page.items[0].title, /image1/);
-    settings.intervalSeconds = 7;
-    settings.historyPageSize = 2;
-    await peer.request("settings.changed", { ...settings });
-    page = await readyPage(0, 0);
-    assert.equal(page.items.length, 2);
-    settings.historyPageSize = 16;
-    await peer.request("settings.changed", { ...settings });
-    page = await readyPage(0, 0);
-    assert.equal(page.items.length, 6);
-    const shared = page.items.find((item) => /image3/.test(item.title));
-    pending = await pageAction("history.delete-request", {
-      generation: page.generation,
-      slot: shared.slot,
-    });
-    await pageAction("history.delete-confirm", {
-      confirmationToken: pending.confirmationToken,
-    });
-    second = await readyPage(1, 0);
-    assert.equal(second.total, 0, "deleted path removed from every monitor");
-    rejectImages = true;
-    page = await readyPage(0, 0);
+    await configure({ historyLimit: 30 });
+    assert.equal(paths(0).length, 5);
+    failHistoryIndex = "after";
+    await configure({ historyLimit: 4 });
     assert.equal(
-      rejectedRegistrations,
-      1,
-      "a closed View stops the worker after the first rejected registration",
+      paths(0).length,
+      4,
+      "an uncertain receipt does not delete a possibly committed generation",
     );
-    assert(page.items.every((item) => item.status === "error"));
-    await peer.request("command.execute", {
-      id: "at365.wallpaper-slideshow.home",
-    });
-    assert.equal(detailsOpened, true);
-    assert.equal(registered.size, 0);
-    assert.equal(
-      fs
-        .readdirSync(imageDirectory, { recursive: true })
-        .filter((name) => name.endsWith(".png")).length,
-      0,
+    await configure({ historyLimit: 30 });
+    const current = values.get("history");
+    const liveKeys = new Set([
+      "history",
+      ...current.monitors.flatMap((monitor) => monitor.chunks),
+    ]);
+    assert.deepEqual(
+      new Set(values.keys()),
+      liveKeys,
+      "old metadata generations are reclaimed",
     );
-    assert.equal(panel.images, null);
+    await command("home");
+    assert(detailsOpened);
     await peer.request("deactivate");
-    deactivated = true;
-    assert.equal(
-      logs.filter((entry) => entry.message.includes("[画像サイズ:")).length,
-      1,
-      "engine errors use host logging with duplicate suppression",
-    );
-    assert(
-      !logs.some((entry) => entry.message.includes("[Windowsの背景設定]")),
-      "obsolete background mutation is not executed",
-    );
-    assert.equal(
-      logs.filter((entry) => entry.message.includes("[AppDock設定の反映]"))
-        .length,
-      1,
-      "settings error has one common log entry",
-    );
-    assert(
-      logs.some((entry) => entry.message.includes("[fixture shutdown]")),
-      "cleanup logs flushed before deactivation completes",
-    );
-    assert(logs.every((entry) => entry.level === "error"));
+    stopped = true;
     child.stdin.end();
     assert.equal(await exited, 0, diagnostics);
-    console.log(
-      JSON.stringify(
-        {
-          ok: true,
-          checks: [
-            "activation / no tray / unified start / command registration",
-            "start / stop / toggle / next",
-            "playback with invalid image settings",
-            "live settings / invalid rollback",
-            "independent page / removed previous-next commands / 2-4-16 items / thumbnail URLs and release",
-            "delete confirmation / cancel / exact fixture file removed / repeat rejected",
-            "engine / command / settings / shutdown errors use common host logging",
-            "deactivate / EOF",
-          ],
-        },
-        null,
-        2,
+    assert(logs.some((entry) => entry.message.includes("[fixture shutdown]")));
+    assert(
+      !calls.some(
+        (method) =>
+          method.startsWith("host.storage.") && method !== "host.storage.set",
       ),
     );
+    console.log(
+      JSON.stringify({
+        ok: true,
+        checks: [
+          "activation / 5 commands / no tray",
+          "start-stop-next / valid settings / invalid rollback",
+          "memory Storage path publication / no pixel API or history file",
+          "native source deletion event removes every monitor / retired memory chunks reclaimed",
+          "rejected and uncertain publications retain readable metadata / next success releases old and unacknowledged chunks",
+          "home / shutdown logging / clean EOF",
+        ],
+      }),
+    );
   } finally {
-    if (!deactivated && !peer.closed)
+    if (!stopped && !peer.closed)
       await peer.request("deactivate").catch(() => {});
     child.stdin.end();
     peer.close();
     if (child.exitCode === null) child.kill();
-    fs.rmSync(imageDirectory, { recursive: true, force: true });
   }
 })().catch((error) => {
   console.error(error);

@@ -5,8 +5,8 @@
   "displayName": "WallpaperSlideshow",
   "icon": "image",
   "tagline": "お気に入りの景色を、デスクトップに。",
-  "version": "0.7.6",
-  "minimumHostVersion": "0.66.1",
+  "version": "0.8.0",
+  "minimumHostVersion": "0.112.2",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",
   "runtime": "native",
@@ -16,7 +16,7 @@
     "ui",
     "settings",
     "storage",
-    "local-images",
+    "source-images",
     "pages"
   ],
   "settings": [
@@ -234,16 +234,6 @@
     "id": "history", "title": "最近使った壁紙", "icon": "image", "source": "local",
     "ui": "web/history.html", "openCommand": "at365.wallpaper-slideshow.history", "defaultDisplay": "page"
   }],
-  "pageActions": [
-    { "id": "history.state" },
-    { "id": "history.gallery-size", "parameters": { "cardWidth": "number" } },
-    { "id": "history.read", "parameters": { "monitor": "number", "page": "number", "offset": "number", "limit": "number", "generation": "string" } },
-    { "id": "history.release", "parameters": { "generation": "string" } },
-    { "id": "history.open", "parameters": { "generation": "string", "slot": "number" } },
-    { "id": "history.delete-request", "parameters": { "generation": "string", "slot": "number" } },
-    { "id": "history.delete-confirm", "parameters": { "confirmationToken": "string" } },
-    { "id": "history.delete-cancel", "parameters": { "confirmationToken": "string" } }
-  ],
   "settingActions": [
     {
       "title": "Windowsの背景設定を開く",
