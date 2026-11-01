@@ -9,7 +9,7 @@
 - HTML/JavaScriptの履歴ページはStorageから一覧を読み、共通の元画像参照を通して元ファイルを取得する。縮小画像はCanvasとBlob URLで作り、このページの表示中だけ保持する。
 - Node.jsはAppDock本体のStorage・ファイル配信を担当する。Applet専用の追加Nodeプロセスや.NETとの画像RPCは設けない。
 
-ページID、リボンID、開くコマンドは`history`、`page:at365.wallpaper-slideshow:history`、`at365.wallpaper-slideshow.history`を維持する。capabilityは`ui/settings/storage/source-images/pages`。最低ホスト版は0.112.2。
+ページID、リボンID、開くコマンドは`history`、`page:at365.wallpaper-slideshow:history`、`at365.wallpaper-slideshow.history`を維持する。capabilityは`ui/settings/storage/source-images/pages`。最低ホスト版は0.113.0。
 
 ## メモリに公開する履歴
 
@@ -37,7 +37,7 @@
 
 サムネイルから開くプレビューはページ領域の幅・高さの60%。画像比率を保ち、画像内クリックとドラッグでは閉じず、背景・閉じるボタン・Escで閉じてフォーカスを戻す。
 
-「開く」は固定された元画像参照をOSの関連付けへ渡す。「削除」は対象パスと「ごみ箱へ移す」「キャンセル」を表示し、確認を消費してから1回だけ送信する。ごみ箱への移動はホストが行い、成功後の`IPageFileHandler`通知で.NETは同じパスを全モニターから取り除き、パス一覧を再公開する。確認中は通常更新を保留し、失敗時は元ファイルと履歴を保持する。結果不明の削除を自動再送しない。
+「開く」は固定された元画像参照をOSの関連付けへ渡す。「削除」は対象パスと確認/キャンセルを表示する。通常の画像は「ごみ箱へ移す」、ホストがネットワーク画像と判定したものは「削除する」とし、Windowsのごみ箱に入らず元に戻せない可能性を明示する。確認を消費してから、前者は`sourceImages.trash`、後者は`sourceImages.delete`を1回だけ送信する。ごみ箱の失敗から直接削除へ自動で切り替えない。成功後の`IPageFileHandler`通知で.NETは同じパスを全モニターから取り除き、パス一覧を再公開する。確認中は通常更新を保留し、失敗時は元ファイルと履歴を保持する。結果不明の削除を自動再送しない。
 
 「壁紙の操作に戻る」は履歴Viewを破棄してホストのApplet管理へ戻る。停止時のエンジン解放、WM_ENDSESSION、2秒の終了猶予、共通ログへの排出は維持する。Windowsの壁紙設定やThemesキャッシュは読み書きしない。
 

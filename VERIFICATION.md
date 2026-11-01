@@ -1,5 +1,19 @@
 # 検証記録
 
+## 2026-11-01: NAS画像削除のコミット前照合
+
+- 0.9.0の実装時入力・ログ・発行物のSHA256が一致し、利用者からも実NASで削除できたことを確認された。Release build、native回帰/RPC、壁紙JS4件、ソースと固定EXEの通常/NAS履歴GUI各11群、発行EXEの起動/終了を再利用する。本体標準165ファイル1,491件も再利用と未実施分の追加で成功が揃った。
+- 本体側の梱包試験にあったShift_JIS固定読み取りだけをUTF-8環境へ対応し、製品コード・版・配布物は変更していない。今回のNAS対応10ファイルをstageし、作業内容・stage/commit treeを照合する。コミット後に依頼された自動更新ON/OFFの作業へ進み、その差分をこのコミットへ混ぜない。push・Release・実利用deployは行わない。
+- 正本は`../AppDock.at365/.artifacts/commit-validation-wallpaper-network-delete-20261101/`の再利用・追加回帰・レビューとstage/commit記録。前工程のGUI/発行物・本体の失敗ログを保持し、新たな削除対象は0件。
+
+## 2026-11-01: NAS上の履歴画像を確認後に削除 0.9.0
+
+- main/cd9ca40のclean状態でpull --ff-onlyを実行し、更新なしを確認して着手。履歴の新しい画像APIがごみ箱専用だったため、NAS画像の削除が失敗していた。登録結果の削除方式に応じ、ローカルは「ごみ箱へ移す」、ネットワークはWindowsのごみ箱へ入らず復元できない可能性を明示した「削除する」とした。キャンセル、対象固定、確認消費、失敗時の元画像/履歴保持、成功後の全モニター反映を維持する。
+- `sourceImages.delete`を使うため最低本体版を0.113.0へ上げ、共通ルールに従って0.8.0→0.9.0へマイナー更新。nativeは版以外を変更せず、メモリ描画・履歴パスの公開・設定・停止は従来どおり。ごみ箱失敗から直接削除へ自動で切り替えない。仕様は本体`docs/memory-storage.md`と本repo`docs/history-page-design.md`。
+- Release buildは警告/エラー0、native回帰と公開EXE/RPCが終了0。共通APIのネットワーク判定/ローカル保護と壁紙JSを含む関連94件がfail/skip 0。ソースと発行済み固定EXEの両方で通常/NASの履歴GUI各11群が成功し、NAS確認文、キャンセル、アクセス拒否時保持・非再送、再確認後の削除、既存の表示・操作・保存・解放を確認した。ネットワーク実体の解決は専用一時画像で模擬し、実NASや利用中の画像には接続・操作していない。
+- publish.batは終了0。40.ARTIFACTへ0.9.0を発行し、EXE **51761126 bytes / SHA256 `fd4205377b46733e4ca3253034b8e653f7ef95cd83de77803f3333519314e863`**、ZIP **46338686 bytes / SHA256 `bdc4b74c0391910512fe576ef2c545694ff5b7685e09a356c85172d836083dda`**、manifest/feedの版・最低本体版、ZIP全10ファイル・元Web資産8件が一致した。ギャラリーの版情報を0.113.0へ同期し、JS/CSS本体は不変。
+- 正本は`../AppDock.at365/.artifacts/wallpaper-network-delete-20261101/`の入力/完全ログ/レビュー/配布照合/最終validationとcleanup。固定NAS GUIは`.artifacts/history-page-ui-network-delete-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793499006538/`。古い成功GUIの実行用コピーだけを整理し、結果・画像・設定・最新コピー・再利用資料を保持した。実壁紙・Explorer再起動・実ロック/RDP・実ごみ箱/関連付けアプリ、コミット・push・Release・実利用先deployは行っていない。
+
 ## 2026-10-31: 履歴メモリ化のコミット前照合
 
 - 本体と合わせた1,084入力、実装時ログと発行物のSHA256を照合し、一致を確認した。0.8.0のRelease build、native回帰/RPC/長パス1,000件、JS4件、ソースと固定EXEの履歴GUI各11群、発行EXEの不正設定拒否・自身のHWND処理・正常終了を再利用する。本体標準161ファイル1,448件も再利用と未実施分の追加で成功が揃った。

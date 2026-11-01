@@ -38,7 +38,7 @@ EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・
 
 発行後の履歴GUIには`--published-assets --long-cache`を付け、発行先のweb一式を隔離したnative fixtureへコピーして検証します。カードサイズの独立保存、View再生成とApplet再起動での復元、共有設定の不変、画像キャッシュファイルが作られないこと、閉じたときのBlob URL解放、元画像の移動・読取失敗を確認します。`scripts/test-history-modules.cjs`は保存失敗・明示再試行・不正幅・破損／未知版の非上書きと、閉じた後の遅延decodeの解放を検査します。
 
-表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidthだけを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使うため、最低ホスト版は0.112.2です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
+表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidthだけを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使うため、最低ホスト版は0.113.0です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
 
 ## デスクトップのメモリ描画
 
@@ -66,7 +66,9 @@ DesktopHostは従来のWorkerW構成とProgman配下の背景構成を検出し�
 
 内部のAppLogは既存の[ホストLogging API](../AppDock.at365/docs/extensions.md#sdkで使えるサービス)の`IExtensionContext.Log.ErrorAsync`へ接続します。開始前に接続し、エンジンの停止後に切り離します。操作名と例外詳細をエラーとして送り、同じ操作/メッセージは1分間抑制します。最大128件の待ち行列を1つのバックグラウンド処理で送信し、1件の通信と終了時の排出待ちはそれぞれ最大1秒。キュー満杯や通信失敗時はstderrへ出し、壁紙処理を失敗させません。独自`errors.log`の作成・追記・ローテーションを廃止し、既存ファイルは変更しません。設定反映エラーもこの経路へ統一します。起動失敗は最大1秒だけ送信完了を待ち、ホストが起動失敗のプロセスを停止する前に記録します。
 
-画像の削除はWindowsの[IFileOperationのごみ箱指定](https://learn.microsoft.com/ja-jp/windows/win32/api/shobjidl_core/nf-shobjidl_core-ifileoperation-setoperationflags)を使用します。
+履歴画像の削除は本体の元画像APIを使用します。ローカル画像はごみ箱へ送り、ネットワーク画像は注意を明示した確認後に専用の削除APIへ渡します。失敗時の自動切り替えは行いません。共通契約は[メモリStorageと元画像表示](../AppDock.at365/docs/memory-storage.md)を参照してください。
+
+履歴GUIの`--network-delete`は、専用一時画像の実体パスだけをUNCへ解決するfixtureです。確認文、キャンセル、接続/アクセス拒否時の保持、明示再試行、1回の削除と全モニター反映を確認します。削除するのは作成した一時画像だけで、実NASへは接続しません。
 
 ## Windowsのシャットダウン・ログオフ
 
@@ -84,7 +86,7 @@ AppDock 0.26.29以降のmanifest `commands[].automation`で公開対象を宣言
 
 ## 設定コマンド
 
-公開設定はmanifestのpaused/intervalSecondsで宣言し、pausedのon/off/toggleは本体生成へ置き換えました。旧start/stop/toggleとresume alias、独自PauseAsyncを削除。パネルは生成IDを参照します。画像設定の検証より先にsettings.changedのpausedをエンジンへ反映し、不正な画像設定があっても停止・再開を維持します。最低本体版0.112.2、公開/生成/競合/ログは[共通仕様](../AppDock.at365/docs/automation.md#設定宣言と自動生成コマンド)を参照。RPC試験は更新通知の保存値を実プロセスへ送り、生成コマンドの実行はホストGUIで検証します。
+公開設定はmanifestのpaused/intervalSecondsで宣言し、pausedのon/off/toggleは本体生成へ置き換えました。旧start/stop/toggleとresume alias、独自PauseAsyncを削除。パネルは生成IDを参照します。画像設定の検証より先にsettings.changedのpausedをエンジンへ反映し、不正な画像設定があっても停止・再開を維持します。最低本体版0.113.0、公開/生成/競合/ログは[共通仕様](../AppDock.at365/docs/automation.md#設定宣言と自動生成コマンド)を参照。RPC試験は更新通知の保存値を実プロセスへ送り、生成コマンドの実行はホストGUIで検証します。
 
 ## 公開設定
 
@@ -94,7 +96,7 @@ GUI試験にscripts/settings-mcp-check.cjsによる隔離MCP確認を含みま�
 
 ## 設定画面の構成
 
-`extension.json`の`settingSections`で用途別のカードを宣言します。描画・余白・入力・検索・保存は[本体の共通テンプレート](../AppDock.at365/docs/extensions.md#共通の設定ページ)へ委譲し、Applet固有の設定フォームやCSSを複製しません。`monitors.list`で番号付きの共通一覧と追加・編集・削除・並べ替えダイアログを使います。番号は配列順から表示し、保存データへIDや名前を追加しません。履歴のメモリStorageと元画像参照には本体0.112.2以上が必要です。
+`extension.json`の`settingSections`で用途別のカードを宣言します。描画・余白・入力・検索・保存は[本体の共通テンプレート](../AppDock.at365/docs/extensions.md#共通の設定ページ)へ委譲し、Applet固有の設定フォームやCSSを複製しません。`monitors.list`で番号付きの共通一覧と追加・編集・削除・並べ替えダイアログを使います。番号は配列順から表示し、保存データへIDや名前を追加しません。履歴のメモリStorageと元画像参照には本体0.113.0以上が必要です。
 
 `scripts/test-monitor-list-ui.cjs`は実Appletを無効状態のまま隔離したホストで設定を編集し、旧JSON/Folder/数値Mode、フォルダー選択、登録単位の保存・取消・競合、並べ替え、テーマと狭幅を検証します。ホストのローカルNodeで実行し、発行ホストEXEを第1引数に渡すと固定コピーと発行Applet一式を使用します。壁紙は変更しません。
 

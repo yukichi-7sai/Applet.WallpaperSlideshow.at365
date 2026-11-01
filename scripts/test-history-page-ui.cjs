@@ -11,10 +11,12 @@ const portable =
     ? path.resolve(process.argv[2])
     : null;
 const longCache = process.argv.includes("--long-cache");
+const networkDelete = process.argv.includes("--network-delete");
 const profile = path.join(
   root,
   ".artifacts",
   "history-page-ui-" +
+    (networkDelete ? "network-delete-" : "") +
     (longCache ? "long-cache-" + "x".repeat(32) + "-" : "") +
     Date.now(),
 );
@@ -223,7 +225,7 @@ const previewSize = async () => {
       APPDOCK_WALLPAPER_FIXTURE: "1",
     });
     hostHash = instance.hash;
-    await instance.app.evaluate(({ shell }) => {
+    await instance.app.evaluate(({ shell }, networkDelete) => {
       const fs = process.getBuiltinModule("node:fs"),
         path = process.getBuiltinModule("node:path");
       globalThis.wallpaperEffects = [];
@@ -244,7 +246,42 @@ const previewSize = async () => {
         fs.unlinkSync(file);
         globalThis.wallpaperEffects.push(["trash", file]);
       };
-    });
+      if (networkDelete) {
+        const realpath = fs.promises.realpath.bind(fs.promises);
+        const open = fs.promises.open.bind(fs.promises);
+        const unlink = fs.promises.unlink.bind(fs.promises);
+        const prefix = "\\\\AppDockNetworkFixture\\images\\";
+        const fixture = (file) =>
+          typeof file === "string" &&
+          path.basename(path.dirname(file)).startsWith("WallpaperFixture-") &&
+          path.extname(file) === ".png";
+        fs.promises.realpath = async (file, ...args) =>
+          fixture(file)
+            ? prefix + Buffer.from(file).toString("base64url") + ".png"
+            : realpath(file, ...args);
+        fs.promises.open = (file, ...args) =>
+          open(
+            typeof file === "string" && file.startsWith(prefix)
+              ? Buffer.from(
+                  file.slice(prefix.length, -4),
+                  "base64url",
+                ).toString()
+              : file,
+            ...args,
+          );
+        fs.promises.unlink = async (file) => {
+          if (fixture(file)) {
+            owned(file);
+            globalThis.wallpaperEffects.push(["delete", file]);
+            if (globalThis.wallpaperDeleteFailure)
+              throw Object.assign(Error("fixture network access denied"), {
+                code: "EACCES",
+              });
+          }
+          return unlink(file);
+        };
+      }
+    }, networkDelete);
     await instance.app.context().addInitScript(observeThumbnails);
     const main = instance.main;
     instance.app
@@ -462,13 +499,58 @@ const previewSize = async () => {
     await ui.getByRole("button", { name: "削除", exact: true }).first().click();
     await ui.getByRole("dialog", { name: "画像を削除" }).waitFor();
     assert.equal(await ui.locator("#delete-path").textContent(), original);
+    assert.equal(
+      await ui
+        .locator("#delete-description")
+        .textContent()
+        .then((text) => text.includes("Windowsのごみ箱には入りません")),
+      networkDelete,
+    );
     await ui.getByRole("button", { name: "キャンセル", exact: true }).click();
     assert(fs.existsSync(original));
     await ui.getByRole("button", { name: "削除", exact: true }).first().click();
     await ui.screenshot({ path: path.join(profile, "history-delete.png") });
-    await ui.getByRole("button", { name: "ごみ箱へ移す", exact: true }).click();
+    const deleteLabel = networkDelete ? "削除する" : "ごみ箱へ移す";
+    if (networkDelete) {
+      await instance.app.evaluate(() => {
+        globalThis.wallpaperDeleteFailure = true;
+      });
+      await ui.getByRole("button", { name: deleteLabel, exact: true }).click();
+      await ui.locator("#error").waitFor({ state: "visible" });
+      assert(fs.existsSync(original));
+      assert.match(
+        await ui.locator("#error").textContent(),
+        /接続とアクセス権/,
+      );
+      await ready(3);
+      assert.equal(
+        await instance.app.evaluate(
+          () =>
+            globalThis.wallpaperEffects.filter(([kind]) => kind === "delete")
+              .length,
+        ),
+        1,
+      );
+      await instance.app.evaluate(() => {
+        globalThis.wallpaperDeleteFailure = false;
+      });
+      await ui
+        .getByRole("button", { name: "削除", exact: true })
+        .first()
+        .click();
+    }
+    await ui.getByRole("button", { name: deleteLabel, exact: true }).click();
     await ready(2);
     assert(!fs.existsSync(original));
+    const removals = await instance.app.evaluate(() =>
+      globalThis.wallpaperEffects.filter(
+        ([kind]) => kind === "delete" || kind === "trash",
+      ),
+    );
+    assert.deepEqual(
+      removals.map(([kind]) => kind),
+      networkDelete ? ["delete", "delete"] : ["trash"],
+    );
     checks.push(
       "monitor positions / page boundaries / preview and Esc / open routed to fake / delete confirmation-cancel-success",
     );
@@ -552,11 +634,9 @@ const previewSize = async () => {
             .then((count) => count === 2),
         "hidden page reopens",
       );
-      const missing = ui
-        .locator(".ad-gallery-card")
-        .filter({
-          has: ui.locator("h3", { hasText: path.basename(temporarilyMissing) }),
-        });
+      const missing = ui.locator(".ad-gallery-card").filter({
+        has: ui.locator("h3", { hasText: path.basename(temporarilyMissing) }),
+      });
       await until(
         () =>
           missing
@@ -578,11 +658,9 @@ const previewSize = async () => {
     fs.renameSync(temporarilyMissing, temporarilyMissing + ".moved");
     try {
       await ui.getByRole("button", { name: "履歴を更新", exact: true }).click();
-      const missing = ui
-        .locator(".ad-gallery-card")
-        .filter({
-          has: ui.locator("h3", { hasText: path.basename(temporarilyMissing) }),
-        });
+      const missing = ui.locator(".ad-gallery-card").filter({
+        has: ui.locator("h3", { hasText: path.basename(temporarilyMissing) }),
+      });
       await until(
         () =>
           missing
@@ -766,6 +844,7 @@ const previewSize = async () => {
           portable: portable || null,
           hostSha256: hostHash,
           publishedAssets,
+          networkDelete,
           errors,
         },
         null,
@@ -822,7 +901,7 @@ const previewSize = async () => {
     fs.writeFileSync(
       path.join(profile, "result.json"),
       JSON.stringify(
-        { ok: false, checks, errors, error: error.stack },
+        { ok: false, checks, errors, networkDelete, error: error.stack },
         null,
         2,
       ),

@@ -115,7 +115,18 @@ const gallery = mountImageGallery($("cards"), {
     else if (command === "delete")
       void operate(async () => {
         const source = await images.source(item);
-        confirmationToken = { source, path: item.path };
+        const permanent = source.deletion === "permanent";
+        confirmationToken = {
+          source,
+          path: item.path,
+          operation: permanent ? "sourceImages.delete" : "sourceImages.trash",
+        };
+        $("delete-description").textContent = permanent
+          ? "この元画像をネットワーク上から削除します。Windowsのごみ箱には入りません。元に戻せない可能性があります。すべてのモニターの履歴からも取り除きます。"
+          : "この元画像をごみ箱へ移します。すべてのモニターの履歴からも取り除きます。";
+        $("delete-confirm-label").textContent = permanent
+          ? "削除する"
+          : "ごみ箱へ移す";
         $("delete-path").textContent = item.path;
         dialogFocus = focus;
         $("delete-dialog").showModal();
@@ -507,7 +518,7 @@ $("delete-confirm").addEventListener(
       $("delete-confirm").disabled = true;
       $("delete-cancel").disabled = true;
       try {
-        await call("sourceImages.trash", { id: pending.source.id });
+        await call(pending.operation, { id: pending.source.id });
       } finally {
         finishDialog("delete-dialog");
         $("delete-confirm").disabled = false;

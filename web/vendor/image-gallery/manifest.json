@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "version": "0.112.2",
+  "version": "0.113.0",
   "files": {
     "image-gallery.js": "c8d14aa5ebf0c7c5d504ef325aefbdc5e5d02506aa6d7d2074d4a5838c05b295",
     "gallery.css": "65522b267adfd8e6c9c2815c89680b79aeb5fc88656f5d55bf06c8b69382bcec"
