@@ -12,10 +12,12 @@ const portable =
     : null;
 const longCache = process.argv.includes("--long-cache");
 const networkDelete = process.argv.includes("--network-delete");
+const refreshMode = process.argv.includes("--refresh-mode-only");
 const profile = path.join(
   root,
   ".artifacts",
   "history-page-ui-" +
+    (refreshMode ? "refresh-mode-" : "") +
     (networkDelete ? "network-delete-" : "") +
     (longCache ? "long-cache-" + "x".repeat(32) + "-" : "") +
     Date.now(),
@@ -223,6 +225,7 @@ const previewSize = async () => {
   try {
     instance = await launch(profile, portable, {
       APPDOCK_WALLPAPER_FIXTURE: "1",
+      ...(refreshMode ? { APPDOCK_WALLPAPER_REFRESH_FIXTURE: "1" } : {}),
     });
     hostHash = instance.hash;
     await instance.app.evaluate(({ shell }, networkDelete) => {
@@ -314,6 +317,212 @@ const previewSize = async () => {
     await ui
       .getByRole("heading", { name: "最近使った壁紙", exact: true })
       .waitFor();
+    await ready(7);
+    if (refreshMode) {
+      let main = instance.main;
+      const nativeIndex = () =>
+        ui.evaluate(() =>
+          window.appletPage.call("storage.get", {
+            key: "history",
+            scope: "memory",
+          }),
+        );
+      const countIs = (count) =>
+        until(
+          async () =>
+            (await ui.locator("#count strong").textContent()) === `${count} 件`,
+          `display count ${count}`,
+        );
+      const next = () =>
+        main.evaluate(
+          (id) => window.dock.executeCommand(id + ".next"),
+          manifest.id,
+        );
+      const settled = async () => {
+        await until(
+          async () =>
+            (await ui.locator("#cards").getAttribute("aria-busy")) === "false",
+          "history idle",
+        );
+        await ui.evaluate(
+          () =>
+            new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            ),
+        );
+      };
+      const preference = () =>
+        ui.evaluate(() =>
+          window.appletPage.call("storage.get", {
+            key: "gallery-view",
+            scope: "device",
+          }),
+        );
+      assert.equal(
+        await ui
+          .getByRole("checkbox", { name: "自動更新", exact: true })
+          .isChecked(),
+        false,
+      );
+      const frozen = await nativeIndex();
+      const originalCards = await ui.locator("#cards").textContent();
+      await next();
+      await next();
+      assert.equal((await nativeIndex()).monitors[0].count, 9);
+      await settled();
+      await countIs(7);
+      assert.equal(await ui.locator("#cards").textContent(), originalCards);
+      checks.push(
+        "automatic refresh defaults off and background publications preserve displayed cards",
+      );
+      await instance.save({
+        extensionId: manifest.id,
+        settings: { historyPageSize: 3 },
+      });
+      await ready(3);
+      await ui.getByRole("button", { name: "次のページ", exact: true }).click();
+      await ready(3);
+      await ui.getByRole("button", { name: "次のページ", exact: true }).click();
+      await ready(1);
+      await countIs(7);
+      assert(
+        await ui
+          .locator("#cards img")
+          .first()
+          .evaluate((image) => image.complete && image.naturalWidth > 0),
+      );
+      checks.push(
+        "page navigation reads the frozen generation after newer native history is published",
+      );
+      await ui.getByRole("button", { name: "履歴を更新", exact: true }).click();
+      await ready(3);
+      await countIs(9);
+      await next();
+      await settled();
+      await countIs(9);
+      assert(
+        await ui.evaluate(
+          async (keys) =>
+            (
+              await Promise.all(
+                keys.map((key) =>
+                  window.appletPage.call("storage.get", {
+                    key,
+                    scope: "memory",
+                  }),
+                ),
+              )
+            ).every((value) => value == null),
+          frozen.monitors.flatMap((monitor) => monitor.chunks),
+        ),
+      );
+      checks.push(
+        "manual refresh adopts the latest history and obsolete snapshot chunks are reclaimed",
+      );
+      await ui.getByRole("checkbox", { name: "自動更新", exact: true }).check();
+      await countIs(10);
+      await until(
+        async () => (await preference())?.autoRefresh === true,
+        "automatic refresh saved",
+      );
+      await next();
+      await countIs(11);
+      checks.push(
+        "enabling automatic refresh immediately adopts current history and follows later changes",
+      );
+      await ui
+        .getByRole("checkbox", { name: "自動更新", exact: true })
+        .uncheck();
+      await until(
+        async () => (await preference())?.autoRefresh === false,
+        "manual mode saved",
+      );
+      await next();
+      await settled();
+      await countIs(11);
+      await ui.screenshot({
+        path: path.join(profile, "history-auto-refresh-off.png"),
+      });
+      const old = ui;
+      await ui.locator("#home").click();
+      await until(() => old.isClosed(), "old history disposed");
+      await main.evaluate(
+        (id) => window.dock.executeCommand(id + ".history"),
+        manifest.id,
+      );
+      ui = await instance.page("/web/history.html");
+      await ready(3);
+      await countIs(12);
+      assert.equal(
+        await ui
+          .getByRole("checkbox", { name: "自動更新", exact: true })
+          .isChecked(),
+        false,
+      );
+      checks.push(
+        "disabling freezes the current history and a reopened View reads current data with the saved mode",
+      );
+      await ui.getByRole("checkbox", { name: "自動更新", exact: true }).check();
+      await until(
+        async () => (await preference())?.autoRefresh === true,
+        "enabled preference persisted",
+      );
+      await instance.close();
+      instance = null;
+      instance = await launch(profile, portable, {
+        APPDOCK_WALLPAPER_FIXTURE: "1",
+        APPDOCK_WALLPAPER_REFRESH_FIXTURE: "1",
+      });
+      main = instance.main;
+      await until(
+        async () =>
+          (await main.evaluate(() => window.dock.snapshot())).extensions.find(
+            (item) => item.id === manifest.id,
+          )?.state === "running",
+        "restarted native fixture",
+      );
+      await main.evaluate(
+        (id) => window.dock.executeCommand(id + ".history"),
+        manifest.id,
+      );
+      ui = await instance.page("/web/history.html");
+      await ready(3);
+      await countIs(7);
+      assert(
+        await ui
+          .getByRole("checkbox", { name: "自動更新", exact: true })
+          .isChecked(),
+      );
+      await next();
+      await countIs(8);
+      await ui.screenshot({
+        path: path.join(profile, "history-auto-refresh-on.png"),
+      });
+      checks.push(
+        "PC-local automatic refresh preference survives host and native Applet restart",
+      );
+      assert.deepEqual(errors, []);
+      fs.writeFileSync(
+        path.join(profile, "result.json"),
+        JSON.stringify(
+          {
+            ok: true,
+            checks,
+            portable,
+            publishedAssets,
+            networkDelete,
+            refreshMode,
+            hostSha256: instance.hash,
+            errors,
+          },
+          null,
+          2,
+        ),
+      );
+      console.log(JSON.stringify({ ok: true, profile, checks }));
+      return;
+    }
+    await ui.getByRole("checkbox", { name: "自動更新", exact: true }).check();
     await ready(7);
     await ui.evaluate(() => {
       window.thumbnailStability.phase = null;
@@ -845,6 +1054,7 @@ const previewSize = async () => {
           hostSha256: hostHash,
           publishedAssets,
           networkDelete,
+          refreshMode,
           errors,
         },
         null,
@@ -901,7 +1111,14 @@ const previewSize = async () => {
     fs.writeFileSync(
       path.join(profile, "result.json"),
       JSON.stringify(
-        { ok: false, checks, errors, networkDelete, error: error.stack },
+        {
+          ok: false,
+          checks,
+          errors,
+          networkDelete,
+          refreshMode,
+          error: error.stack,
+        },
         null,
         2,
       ),

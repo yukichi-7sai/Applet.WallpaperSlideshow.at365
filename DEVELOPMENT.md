@@ -32,13 +32,15 @@ A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365\deploy-with-gallery.bat "C:\Tools
 
 `scripts/test-protocol.cjs` / `scripts/test-ui.cjs`はテスト専用エンジンと一時画像を使用し、ユーザーの壁紙・画像フォルダーを変更しません。
 
-EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history.css`、`web/vendor/image-gallery/`のJS/CSS/manifestを一式で発行します。配置テンプレートも8つのweb資産をコピーします。再発行は運用者所有の既存deployスクリプトを上書きしません。引数と`deploy.local.txt`は従来と同じです。
+EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history-snapshot.js`・`history.css`、`web/vendor/image-gallery/`のJS/CSS/manifestを一式で発行します。配置テンプレートも9つのweb資産をコピーします。再発行は運用者所有の既存deployスクリプトを上書きしません。引数と`deploy.local.txt`は従来と同じです。
 
 履歴のGUI試験は`scripts/test-history-page-ui.cjs [固定ホストEXE]`、設定一覧は`scripts/test-monitor-list-ui.cjs [固定ホストEXE]`です。`scripts/test-ui.cjs`はこの2本を直列で実行します。履歴はfixtureのnative EXEと一時画像を使い、画像カード・開く／削除・プレビュー・明暗テーマ・ページ送り・表示先の往復・停止時の回収を確認します。実際のごみ箱と関連付けアプリは通常試験で操作しません。
 
 発行後の履歴GUIには`--published-assets --long-cache`を付け、発行先のweb一式を隔離したnative fixtureへコピーして検証します。カードサイズの独立保存、View再生成とApplet再起動での復元、共有設定の不変、画像キャッシュファイルが作られないこと、閉じたときのBlob URL解放、元画像の移動・読取失敗を確認します。`scripts/test-history-modules.cjs`は保存失敗・明示再試行・不正幅・破損／未知版の非上書きと、閉じた後の遅延decodeの解放を検査します。
 
-表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidthだけを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使うため、最低ホスト版は0.113.0です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
+表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidth、任意のautoRefreshを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使うため、最低ホスト版は0.113.0です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
+
+履歴GUIの`--refresh-mode-only`は、自動更新OFFの表示維持とページ送り、更新ボタン、ONへの即時切替と後続更新、OFFでの再固定、View/ホスト再起動後の端末別保存を確認します。通常の履歴GUIは明示的にONへ切り替えた後に従来の操作を確認します。保持中の旧区間はprivateなメモリStorageで共有し、元画像の取得・画像解放・権限は共通APIを使います。
 
 ## デスクトップのメモリ描画
 

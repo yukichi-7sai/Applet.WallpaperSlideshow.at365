@@ -93,7 +93,12 @@ internal static class AppletTests
         }
         public void Configure(Config config) { HistoryManager.Instance.SetConfig(config); }
         public void Pause(bool paused) { IsPaused = paused; if (paused) presenter.Pause(); else if (!presenter.HasImage) Display(); }
-        public void Next() { if (!IsPaused) Console.Error.WriteLine("FIXTURE_NEXT_WALLPAPER"); }
+        private int sequence;
+        public void Next() {
+            if (!IsPaused) Console.Error.WriteLine("FIXTURE_NEXT_WALLPAPER");
+            if (Environment.GetEnvironmentVariable("APPDOCK_WALLPAPER_REFRESH_FIXTURE") == "1")
+                HistoryManager.Instance.Push(0, Path.Combine(folder, $"image{sequence++ % 7}.png"), 1000);
+        }
         public void OpenWindowsBackgroundSettings() { Console.Error.WriteLine("FIXTURE_OPEN_BACKGROUND_SETTINGS"); }
         public void Stop() {
             presenter.Dispose();

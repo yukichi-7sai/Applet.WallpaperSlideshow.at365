@@ -38,9 +38,14 @@
             role="tablist"
             aria-label="モニターを選択"
           ></div>
-          <button id="refresh" class="button quiet" aria-label="履歴を更新">
-            <span data-icon="refresh"></span><span>更新</span>
-          </button>
+          <div class="history-actions">
+            <label class="auto-refresh"
+              ><input id="auto-refresh" type="checkbox" />自動更新</label
+            >
+            <button id="refresh" class="button quiet" aria-label="履歴を更新">
+              <span data-icon="refresh"></span><span>更新</span>
+            </button>
+          </div>
         </div>
         <div class="list-toolbar">
           <div class="list-summary">

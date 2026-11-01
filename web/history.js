@@ -6,6 +6,7 @@ import {
 } from "./vendor/image-gallery/image-gallery.js";
 import { HistoryPreferences } from "./history-preferences.js";
 import { MemoryImages } from "./memory-images.js";
+import { HistorySnapshot } from "./history-snapshot.js";
 
 const bridge = window.appletPage;
 const call = (operation, input = {}) => bridge.call(operation, input);
@@ -47,18 +48,22 @@ let model,
 let intent,
   deferred = false,
   forceImages = false,
+  forceHistory = false,
   generationNumber = 0,
   confirmationToken,
   dialogFocus;
 let cardWidth = gallerySize.initial,
   sizeLoaded = false,
   sizeTouched = false,
+  autoRefresh = false,
+  autoRefreshTouched = false,
   widthSave = Promise.resolve();
 let positionsLoaded = false,
   selectedMonitor = 0,
   savedPositions = "";
 const positions = new Map();
 const preferences = new HistoryPreferences(call);
+const history = new HistorySnapshot(call);
 const imageId = (item) => item.id;
 const assetId = (item) =>
   JSON.stringify([
@@ -164,21 +169,29 @@ function sizeError(message) {
   $("size-error").hidden = !message;
   if (!message) return;
   const retry = element("button", "button secondary", "保存を再試行");
-  retry.addEventListener("click", () => saveWidth(cardWidth));
+  retry.addEventListener("click", () =>
+    savePreferences(cardWidth, autoRefresh),
+  );
   $("size-error").append(document.createTextNode(message + " "), retry);
 }
-function saveWidth(value) {
-  sizeTouched = true;
+function savePreferences(value, refresh) {
   widthSave = widthSave
     .catch(() => {})
     .then(async () => {
       try {
-        await preferences.save(value);
+        await preferences.save(value, refresh);
         sizeError("");
       } catch (error) {
         sizeError(String(error?.message || error));
       }
     });
+}
+function saveWidth(value) {
+  sizeTouched = true;
+  savePreferences(
+    value,
+    autoRefreshTouched || sizeLoaded ? autoRefresh : undefined,
+  );
 }
 const sizeControl = mountGallerySizeControl($("gallery-size"), {
   value: cardWidth,
@@ -218,47 +231,34 @@ function changed() {
   refreshQueued = true;
   if (visible) void drain();
 }
-async function readItems(index, monitor, page, pageSize) {
+function readItems(index, monitor, page, pageSize) {
   const previous = new Map(model?.items.map((item) => [item.path, item]) ?? []);
-  const meta = index?.monitors?.[monitor] ?? { count: 0, chunks: [] };
+  const meta = index?.monitors?.[monitor] ?? { count: 0, entries: [] };
   const start = page * pageSize,
     end = start + pageSize;
   const result = [];
-  let offset = 0;
   const duplicates = new Map();
-  for (const key of meta.chunks) {
-    const paths = await memory(key);
-    if (!Array.isArray(paths)) {
-      if ((await memory("history"))?.generation !== index.generation)
-        return null;
-      throw Error("履歴を更新してください。");
-    }
-    paths.forEach((path, position) => {
-      const slot = offset + position;
-      if (slot < start || slot >= end) return;
-      const occurrence = duplicates.get(path) ?? 0;
-      duplicates.set(path, occurrence + 1);
-      const name = path.split(/[\\/]/).at(-1),
-        maximum = settings.maxFileNameLength ?? 30;
-      const old = previous.get(path);
-      result.push({
-        id: JSON.stringify([monitor, path, occurrence]),
-        path,
-        storageKey: key,
-        pointer: `/${position}`,
-        title: name.length > maximum ? name.slice(0, maximum) + "…" : name,
-        status:
-          old?.status === "error" && model.generation !== index.generation
-            ? "ready"
-            : (old?.status ?? "ready"),
-        resolution: old?.resolution ?? "",
-        sizeText: old?.sizeText ?? "",
-        error: old?.error ?? "",
-      });
+  meta.entries.slice(start, end).forEach(({ path, storageKey, pointer }) => {
+    const occurrence = duplicates.get(path) ?? 0;
+    duplicates.set(path, occurrence + 1);
+    const name = path.split(/[\\/]/).at(-1),
+      maximum = settings.maxFileNameLength ?? 30;
+    const old = previous.get(path);
+    result.push({
+      id: JSON.stringify([monitor, path, occurrence]),
+      path,
+      storageKey,
+      pointer,
+      title: name.length > maximum ? name.slice(0, maximum) + "…" : name,
+      status:
+        old?.status === "error" && model.generation !== index.generation
+          ? "ready"
+          : (old?.status ?? "ready"),
+      resolution: old?.resolution ?? "",
+      sizeText: old?.sizeText ?? "",
+      error: old?.error ?? "",
     });
-    offset += paths.length;
-    if (offset >= end) break;
-  }
+  });
   return result;
 }
 async function drain() {
@@ -290,6 +290,10 @@ async function drain() {
           cardWidth = view.cardWidth;
           sizeControl.setValue(cardWidth);
         }
+        if (!autoRefreshTouched) {
+          autoRefresh = view.autoRefresh;
+          $("auto-refresh").checked = autoRefresh;
+        }
         sizeError(view.error);
       }
       if (!positionsLoaded) {
@@ -302,7 +306,17 @@ async function drain() {
               positions.set(Number(key), value);
         }
       }
-      const index = await memory("history");
+      let index = history.current;
+      const refreshHistory = forceHistory;
+      forceHistory = false;
+      if (!index || autoRefresh || refreshHistory) {
+        const latest = await history.latest();
+        if (!index || refreshHistory || index.generation !== latest?.generation)
+          index = await history.capture(
+            latest,
+            () => visible && request === generationNumber,
+          );
+      }
       const signature = JSON.stringify([
         settings.historyPageSize,
         settings.maxFileNameLength,
@@ -337,11 +351,7 @@ async function drain() {
         model = undefined;
         forceImages = false;
       }
-      const items = await readItems(index, monitor, page, pageSize);
-      if (items === null) {
-        refreshQueued = true;
-        continue;
-      }
+      const items = readItems(index, monitor, page, pageSize);
       if (!visible || request !== generationNumber) continue;
       model = {
         items,
@@ -369,7 +379,7 @@ async function drain() {
       }
     }
   } catch (error) {
-    if (visible) showError(error);
+    if (visible && error.name !== "AbortError") showError(error);
   } finally {
     processing = false;
     busy();
@@ -519,6 +529,7 @@ $("delete-confirm").addEventListener(
       $("delete-cancel").disabled = true;
       try {
         await call(pending.operation, { id: pending.source.id });
+        history.remove(pending.path);
       } finally {
         finishDialog("delete-dialog");
         $("delete-confirm").disabled = false;
@@ -535,7 +546,24 @@ $("next").addEventListener("click", () =>
 );
 $("refresh").addEventListener("click", () => {
   $("error").hidden = true;
+  forceHistory = true;
   requestPage(model?.monitor ?? 0, model?.page ?? 0, true);
+});
+$("auto-refresh").addEventListener("change", () => {
+  autoRefreshTouched = true;
+  autoRefresh = $("auto-refresh").checked;
+  savePreferences(
+    sizeTouched || sizeLoaded ? cardWidth : undefined,
+    autoRefresh,
+  );
+  if (autoRefresh) {
+    forceHistory = true;
+    requestPage(model?.monitor ?? 0, model?.page ?? 0);
+  } else {
+    forceHistory = false;
+    generationNumber++;
+    changed();
+  }
 });
 $("home").addEventListener(
   "click",
@@ -561,6 +589,7 @@ function visibility(value) {
     state: "missing",
   });
   images.clear();
+  history.close();
   model = undefined;
   gallery.setModel({
     cardWidth,
@@ -578,6 +607,7 @@ if (bridge) {
     () => {
       visible = false;
       images.clear();
+      history.close();
       unsubscribe();
       unsubscribeVisibility();
       gallery.dispose();

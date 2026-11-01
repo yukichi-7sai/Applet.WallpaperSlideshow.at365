@@ -195,6 +195,31 @@ h1 {
   margin: 22px 0 14px;
   min-height: 36px;
 }
+.history-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.auto-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.auto-refresh input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.auto-refresh input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
 .list-summary {
   display: flex;
   align-items: center;

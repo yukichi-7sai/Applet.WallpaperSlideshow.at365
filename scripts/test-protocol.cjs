@@ -36,6 +36,11 @@ const fixture = path.join(
     child.stdin,
     async (method, params) => {
       calls.push(method);
+      if (method === "host.storage.get") {
+        assert.equal(params.scope, "memory");
+        assert.equal(params.key, "history-snapshot");
+        return values.get(params.key) ?? null;
+      }
       if (method === "host.ui.panel") {
         panel = params;
         return null;
@@ -160,6 +165,25 @@ const fixture = path.join(
       }),
       /提供されていません/,
     );
+    const frozen = structuredClone(values.get("history"));
+    const frozenKeys = frozen.monitors.flatMap((monitor) => monitor.chunks);
+    values.set("history-snapshot", { generations: [frozen.generation] });
+    await configure({ historyLimit: 6 });
+    assert.equal(paths(0).length, 6);
+    assert(
+      frozenKeys.every((key) => values.has(key)),
+      "the displayed generation remains readable",
+    );
+    assert.equal(
+      frozen.monitors[0].chunks.flatMap((key) => values.get(key)).length,
+      7,
+    );
+    values.delete("history-snapshot");
+    await configure({ historyLimit: 30 });
+    assert(
+      frozenKeys.every((key) => !values.has(key)),
+      "released generations are reclaimed",
+    );
     const shared = paths(1)[0];
     fs.unlinkSync(shared);
     await peer.request("page.fileRemoved", { pageId: "history", file: shared });
@@ -203,7 +227,8 @@ const fixture = path.join(
     assert(
       !calls.some(
         (method) =>
-          method.startsWith("host.storage.") && method !== "host.storage.set",
+          method.startsWith("host.storage.") &&
+          !["host.storage.set", "host.storage.get"].includes(method),
       ),
     );
     console.log(

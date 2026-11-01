@@ -21,10 +21,18 @@ test("history card size retains explicit save, retry, device scope and corrupt-d
     if (fail) throw Error("disk unavailable");
     saved = input.value;
   });
-  assert.deepEqual(await preferences.read(), { cardWidth: 260, error: "" });
+  assert.deepEqual(await preferences.read(), {
+    cardWidth: 260,
+    autoRefresh: false,
+    error: "",
+  });
   assert.equal(saved, null);
   await preferences.save(340);
-  assert.deepEqual(saved, { schemaVersion: 1, cardWidth: 340 });
+  assert.deepEqual(saved, {
+    schemaVersion: 1,
+    cardWidth: 340,
+    autoRefresh: false,
+  });
   fail = true;
   await assert.rejects(preferences.save(320), /保存できません/);
   assert.equal(preferences.width, 340);
@@ -32,11 +40,30 @@ test("history card size retains explicit save, retry, device scope and corrupt-d
   fail = false;
   await preferences.save(320);
   assert.equal(preferences.error, "");
+  await preferences.save(320, true);
+  assert.equal(saved.autoRefresh, true);
+  const restored = new HistoryPreferences(async () => saved);
+  assert.deepEqual(await restored.read(), {
+    cardWidth: 320,
+    autoRefresh: true,
+    error: "",
+  });
+  const legacy = new HistoryPreferences(async () => ({
+    schemaVersion: 1,
+    cardWidth: 300,
+  }));
+  assert.deepEqual(await legacy.read(), {
+    cardWidth: 300,
+    autoRefresh: false,
+    error: "",
+  });
   for (const value of [0, 181, 380, NaN])
     await assert.rejects(preferences.save(value));
   for (const data of [
     { schemaVersion: 99, cardWidth: 260 },
     { schemaVersion: 1, cardWidth: -1 },
+    { schemaVersion: 1, cardWidth: 260, autoRefresh: "true" },
+    { schemaVersion: 1, cardWidth: 260, extra: 1 },
     "bad",
   ]) {
     let writes = 0;
@@ -48,6 +75,245 @@ test("history card size retains explicit save, retry, device scope and corrupt-d
     await assert.rejects(corrupt.save(260));
     assert.equal(writes, 0);
   }
+});
+
+function snapshotStorage() {
+  const values = new Map(),
+    calls = [];
+  let serial = 0;
+  const fixture = {
+    values,
+    calls,
+    get index() {
+      return values.get("history");
+    },
+    publish(monitors) {
+      const generation = (++serial).toString(16).padStart(32, "0");
+      const index = {
+        generation,
+        monitors: monitors.map((paths, monitor) => {
+          const key = `history-${generation}-${monitor}`;
+          values.set(key, [...paths]);
+          return { count: paths.length, chunks: [key] };
+        }),
+      };
+      values.set("history", index);
+      const pinned = new Set(values.get("history-snapshot")?.generations ?? []);
+      pinned.add(generation);
+      for (const key of values.keys()) {
+        const match = /^history-([a-f0-9]{32})-/.exec(key);
+        if (match && !pinned.has(match[1])) values.delete(key);
+      }
+      return index;
+    },
+    async call(operation, input) {
+      calls.push([operation, input]);
+      assert.equal(input.scope, "memory");
+      if (operation === "storage.get")
+        return structuredClone(values.get(input.key) ?? null);
+      assert.equal(operation, "storage.set");
+      assert.equal(input.key, "history-snapshot");
+      if (fixture.failBefore) {
+        fixture.failBefore = false;
+        throw Error("lease rejected");
+      }
+      if (input.value == null) values.delete(input.key);
+      else values.set(input.key, structuredClone(input.value));
+      if (fixture.afterLease) {
+        const callback = fixture.afterLease;
+        fixture.afterLease = null;
+        callback();
+      }
+      if (fixture.failAfter) {
+        fixture.failAfter = false;
+        throw Error("lease receipt lost");
+      }
+      return null;
+    },
+  };
+  fixture.call = fixture.call.bind(fixture);
+  return fixture;
+}
+
+test("manual history keeps every page readable across publications, removes explicit targets, and releases its generation", async () => {
+  const { HistorySnapshot } = await moduleAt("history-snapshot.js");
+  const storage = snapshotStorage();
+  const original = storage.publish([["A.png", "B.png", "A.png"], ["A.png"]]);
+  const view = new HistorySnapshot(storage.call);
+  await view.capture(original, () => true);
+  storage.publish([["C.png"]]);
+  assert.equal(view.current.generation, original.generation);
+  const latePage = view.current.monitors[0].entries[1];
+  assert.equal(
+    storage.values.get(latePage.storageKey)[Number(latePage.pointer.slice(1))],
+    "B.png",
+  );
+  view.remove("a.png");
+  assert.deepEqual(
+    view.current.monitors.map((m) => m.count),
+    [1, 0],
+  );
+  assert.equal(storage.values.get(original.monitors[0].chunks[0]).length, 3);
+  await view.capture(storage.index, () => true);
+  assert.equal(view.current.monitors[0].entries[0].path, "C.png");
+  await view.pendingLease;
+  storage.publish([["D.png"]]);
+  assert(!storage.values.has(original.monitors[0].chunks[0]));
+  const held = view.current.monitors[0].entries[0].storageKey;
+  view.close();
+  await view.pendingLease;
+  storage.publish([["E.png"]]);
+  assert(!storage.values.has(held));
+  assert.equal(view.current, null);
+});
+
+test("a rejected or uncertain refresh keeps the previously displayed generation readable", async () => {
+  const { HistorySnapshot } = await moduleAt("history-snapshot.js");
+  for (const failure of ["failBefore", "failAfter"]) {
+    const storage = snapshotStorage();
+    const original = storage.publish([["original.png"]]);
+    const view = new HistorySnapshot(storage.call);
+    await view.capture(original, () => true);
+    await view.pendingLease;
+    storage.publish([["replacement.png"]]);
+    storage[failure] = true;
+    await assert.rejects(view.capture(storage.index, () => true));
+    storage.publish([["newest.png"]]);
+    assert.equal(view.current.generation, original.generation);
+    assert(storage.values.has(original.monitors[0].chunks[0]));
+    view.close();
+    await view.pendingLease;
+  }
+});
+
+test("a publication racing snapshot acquisition never mixes history generations", async () => {
+  const { HistorySnapshot } = await moduleAt("history-snapshot.js");
+  const storage = snapshotStorage();
+  const original = storage.publish([["old.png"]]);
+  storage.afterLease = () => storage.publish([["new.png", "next.png"]]);
+  const view = new HistorySnapshot(storage.call);
+  await view.capture(original, () => true);
+  assert.equal(view.current.generation, storage.index.generation);
+  assert.deepEqual(
+    view.current.monitors[0].entries.map((entry) => entry.path),
+    ["new.png", "next.png"],
+  );
+  view.close();
+  await view.pendingLease;
+});
+
+test("closing history during a metadata read cannot publish a late snapshot or restore its lease", async () => {
+  const { HistorySnapshot } = await moduleAt("history-snapshot.js");
+  const storage = snapshotStorage();
+  const index = storage.publish([["late.png"]]);
+  let entered,
+    finish,
+    visible = true;
+  const started = new Promise((resolve) => {
+    entered = resolve;
+  });
+  const view = new HistorySnapshot((operation, input) => {
+    if (
+      operation === "storage.get" &&
+      input.key === index.monitors[0].chunks[0]
+    ) {
+      entered();
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    }
+    return storage.call(operation, input);
+  });
+  const pending = view.capture(index, () => visible);
+  await started;
+  visible = false;
+  view.close();
+  finish(["late.png"]);
+  await assert.rejects(pending, { name: "AbortError" });
+  await view.pendingLease;
+  assert.equal(view.current, null);
+  assert(!storage.values.has("history-snapshot"));
+});
+
+test("toggling automatic refresh before preferences load preserves the saved card size", async () => {
+  const { HistoryPreferences } = await moduleAt("history-preferences.js");
+  let saved = { schemaVersion: 1, cardWidth: 340 };
+  const preferences = new HistoryPreferences(async (operation, input) => {
+    assert.equal(input.scope, "device");
+    if (operation === "storage.get") return saved;
+    saved = input.value;
+  });
+  await preferences.save(undefined, true);
+  assert.deepEqual(saved, {
+    schemaVersion: 1,
+    cardWidth: 340,
+    autoRefresh: true,
+  });
+  await assert.rejects(preferences.save(340, null));
+});
+
+test("initial preference reads are shared when a toggle is saved during loading", async () => {
+  const { HistoryPreferences } = await moduleAt("history-preferences.js");
+  let release,
+    reads = 0,
+    saved;
+  const barrier = new Promise((resolve) => {
+    release = resolve;
+  });
+  const preferences = new HistoryPreferences(async (operation, input) => {
+    if (operation === "storage.get") {
+      reads++;
+      await barrier;
+      return { schemaVersion: 1, cardWidth: 340 };
+    }
+    saved = input.value;
+  });
+  const read = preferences.read();
+  const save = preferences.save(undefined, true);
+  release();
+  await Promise.all([read, save]);
+  assert.equal(reads, 1);
+  assert.deepEqual(saved, {
+    schemaVersion: 1,
+    cardWidth: 340,
+    autoRefresh: true,
+  });
+});
+
+test("turning automatic refresh off during a read keeps the displayed snapshot and its grants", async () => {
+  const { HistorySnapshot } = await moduleAt("history-snapshot.js");
+  const storage = snapshotStorage();
+  const original = storage.publish([["visible.png"]]);
+  let valid = true,
+    entered,
+    finish;
+  const started = new Promise((resolve) => {
+    entered = resolve;
+  });
+  let blockedKey;
+  const view = new HistorySnapshot((operation, input) => {
+    if (operation === "storage.get" && input.key === blockedKey) {
+      entered();
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    }
+    return storage.call(operation, input);
+  });
+  await view.capture(original, () => true);
+  const newer = storage.publish([["background.png"]]);
+  blockedKey = newer.monitors[0].chunks[0];
+  const pending = view.capture(newer, () => valid);
+  await started;
+  valid = false;
+  finish(["background.png"]);
+  await assert.rejects(pending, { name: "AbortError" });
+  await view.pendingLease;
+  storage.publish([["newest.png"]]);
+  assert.equal(view.current.generation, original.generation);
+  assert(storage.values.has(original.monitors[0].chunks[0]));
+  view.close();
+  await view.pendingLease;
 });
 test("closing history rejects pending sources and never recreates a released image", async () => {
   const { MemoryImages } = await moduleAt("memory-images.js");

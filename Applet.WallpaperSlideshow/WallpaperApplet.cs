@@ -51,6 +51,8 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         Register(services.ExtensionId + ".history", "最近使った壁紙を開く", ct => services.Pages.OpenAsync(HistoryPublisher.PageId, ct));
         Register(services.ExtensionId + ".home", "壁紙の操作に戻る", async ct => {
             await services.Pages.DisposeAsync(HistoryPublisher.PageId, ct);
+            await services.Storage.SetAsync<object?>(HistoryPublisher.SnapshotKey, null, StorageScope.Memory, ct);
+            await history.PublishAsync(ct);
             await PublishAsync(ct);
             await services.Ui.OpenDetailsAsync(ct);
         });

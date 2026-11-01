@@ -22,6 +22,11 @@ const peer = new JsonLinePeer(
   child.stdin,
   async (method, params) => {
     if (["host.ui.panel", "host.log"].includes(method)) return null;
+    if (method === "host.storage.get") {
+      assert.equal(params.scope, "memory");
+      assert.equal(params.key, "history-snapshot");
+      return values.get(params.key) ?? null;
+    }
     assert.equal(method, "host.storage.set");
     assert.equal(params.scope, "memory");
     assert(Buffer.byteLength(JSON.stringify(params)) < 256 * 1024);
@@ -51,8 +56,13 @@ const exited = new Promise((resolve, reject) => {
     assert.match(paths[0], /999\.png$/);
     assert.match(paths.at(-1), /0\.png$/);
     const previousKeys = [...values.keys()];
+    values.set("history-snapshot", { generations: [index.generation] });
     await peer.request("settings.changed", { paused: true, historyLimit: 30 });
     assert.equal(values.get("history").monitors[0].count, 30);
+    assert(monitor.chunks.every((key) => values.has(key)));
+    assert.equal(monitor.chunks.flatMap((key) => values.get(key)).length, 1000);
+    values.delete("history-snapshot");
+    await peer.request("settings.changed", { paused: true, historyLimit: 31 });
     assert(
       previousKeys
         .filter((key) => key !== "history")
@@ -66,7 +76,7 @@ const exited = new Promise((resolve, reject) => {
         ok: true,
         writes,
         checks: [
-          "1000 paths over 400 chars / immutable metadata chunks below RPC limits / newest-first / trimmed history reclaims old chunks / no image API",
+          "1000 paths over 400 chars / immutable metadata chunks below RPC limits / frozen generation stays readable / released history reclaims old chunks / no image API",
         ],
       }),
     );

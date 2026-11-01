@@ -8,6 +8,7 @@ namespace Applets.WallpaperSlideshow;
 internal sealed class HistoryPublisher(Form dispatcher, IStorageService storage)
 {
     internal const string PageId = "history";
+    internal const string SnapshotKey = "history-snapshot";
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly CancellationTokenSource lifetime = new();
     private string[] publishedKeys = [];
@@ -64,7 +65,19 @@ internal sealed class HistoryPublisher(Form dispatcher, IStorageService storage)
     public void Stop() => lifetime.Cancel();
     private async Task ReleaseRetiredAsync(CancellationToken token)
     {
+        if (retiredKeys.Count == 0) return;
+        var pinned = new HashSet<string>(StringComparer.Ordinal);
+        var lease = await storage.GetAsync<JsonElement?>(SnapshotKey, StorageScope.Memory, token);
+        if (lease is { ValueKind: JsonValueKind.Object } value
+            && value.TryGetProperty("generations", out var generations)
+            && generations.ValueKind == JsonValueKind.Array) {
+            foreach (var generation in generations.EnumerateArray())
+                if (generation.ValueKind == JsonValueKind.String
+                    && Guid.TryParseExact(generation.GetString(), "N", out var id))
+                    pinned.Add($"history-{id:N}-");
+        }
         foreach (var key in retiredKeys.ToArray()) {
+            if (pinned.Any(prefix => key.StartsWith(prefix, StringComparison.Ordinal))) continue;
             await storage.SetAsync<object?>(key, null, StorageScope.Memory, token);
             retiredKeys.Remove(key);
         }
