@@ -13,7 +13,8 @@ const call = (operation, input = {}) => bridge.call(operation, input);
 const memory = (key) => call("storage.get", { key, scope: "memory" });
 const $ = (id) => document.getElementById(id);
 const paths = {
-  back: "M19 12H5m6-6-6 6 6 6",
+  settings:
+    "M4 7h16M4 17h16M12 7a3 3 0 1 0-6 0 3 3 0 0 0 6 0M19 17a3 3 0 1 0-6 0 3 3 0 0 0 6 0",
   left: "m14 6-6 6 6 6",
   right: "m10 6 6 6-6 6",
   refresh:
@@ -465,7 +466,8 @@ async function operate(callback) {
     if (refreshQueued) void drain();
   }
 }
-function finishDialog(id) {
+async function finishDialog(id) {
+  const focus = dialogFocus;
   $(id).close();
   if (id === "preview")
     preview.setModel({
@@ -475,12 +477,19 @@ function finishDialog(id) {
       labels: [],
       state: "missing",
     });
-  if (dialogFocus?.isConnected) dialogFocus.focus();
-  else $("refresh").focus();
   if (deferred) {
     deferred = false;
-    changed();
+    refreshQueued = true;
+    await drain();
   }
+  if (!visible || $("preview").open || $("delete-dialog").open) return;
+  if (
+    document.activeElement !== document.body &&
+    document.activeElement !== focus
+  )
+    return;
+  if (focus?.isConnected) focus.focus();
+  else $("refresh").focus();
 }
 $("preview-close").addEventListener("click", () => finishDialog("preview"));
 $("preview").addEventListener("cancel", (event) => {

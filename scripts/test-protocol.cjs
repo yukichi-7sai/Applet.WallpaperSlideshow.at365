@@ -18,7 +18,7 @@ const fixture = path.join(
     calls = [];
   let panel,
     pageOpened = false,
-    detailsOpened = false,
+    settingsOpened = false,
     diagnostics = "",
     stopped = false,
     failHistoryIndex = null;
@@ -54,8 +54,9 @@ const fixture = path.join(
         pageOpened = true;
         return null;
       }
-      if (method === "host.ui.openDetails") {
-        detailsOpened = true;
+      if (method === "host.ui.openSettings") {
+        assert.deepEqual(params, {});
+        settingsOpened = true;
         return null;
       }
       if (method === "host.pages.dispose") return null;
@@ -218,7 +219,7 @@ const fixture = path.join(
       "old metadata generations are reclaimed",
     );
     await command("home");
-    assert(detailsOpened);
+    assert(settingsOpened);
     await peer.request("deactivate");
     stopped = true;
     child.stdin.end();

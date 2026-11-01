@@ -5,8 +5,8 @@
   "displayName": "WallpaperSlideshow",
   "icon": "image",
   "tagline": "お気に入りの景色を、デスクトップに。",
-  "version": "0.10.0",
-  "minimumHostVersion": "0.113.0",
+  "version": "0.11.0",
+  "minimumHostVersion": "0.114.0",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",
   "runtime": "native",
@@ -24,7 +24,7 @@
       "title": "停止",
       "key": "paused",
       "default": false,
-      "description": "手動停止状態を保存します。ロック・リモート接続による停止は別に維持します。",
+      "description": "手動停止状態を保存します。[command:at365.wallpaper-slideshow.settings.paused.on]、[command:at365.wallpaper-slideshow.settings.paused.off]、[command:at365.wallpaper-slideshow.settings.paused.toggle]からも操作できます。ロック・リモート接続による停止は別に維持します。",
       "type": "boolean",
       "automation": true,
       "generateCommands": [
@@ -238,6 +238,7 @@
     {
       "title": "Windowsの背景設定を開く",
       "command": "at365.wallpaper-slideshow.background-settings",
+      "appearance": "filled",
       "description": "停止中に見えるWindows側の背景を確認します。スライドショーの表示に画像・スパンの準備は不要です。",
       "successMessage": "Windowsの背景設定を開きました。"
     }

@@ -6,6 +6,9 @@ const root = path.resolve(__dirname, ".."),
 const { launch, until } = require(
   path.join(host, "scripts/page-test-host.cjs"),
 );
+const { overlayPage, overlayClosed } = require(
+  path.join(host, "scripts/shell-overlay-helper.cjs"),
+);
 const portable =
   process.argv[2] && !process.argv[2].startsWith("--")
     ? path.resolve(process.argv[2])
@@ -636,14 +639,54 @@ const previewSize = async () => {
       true,
       "dragging from the image onto the backdrop does not close",
     );
+    await instance.save({
+      host: { overlayBackground: "blur", overlayShadow: false },
+    });
+    await until(
+      () =>
+        ui
+          .locator("#preview")
+          .evaluate(
+            (dialog) =>
+              getComputedStyle(dialog, "::backdrop").backdropFilter ===
+                "blur(2px)" && getComputedStyle(dialog).boxShadow === "none",
+          ),
+      "open preview follows blur and shadow OFF",
+    );
+    await ui.screenshot({
+      path: path.join(profile, "history-preview-blur-no-shadow.png"),
+    });
+    await instance.save({
+      host: { overlayBackground: "transparent", overlayShadow: true },
+    });
+    await until(
+      () =>
+        ui
+          .locator("#preview")
+          .evaluate(
+            (dialog) =>
+              getComputedStyle(dialog, "::backdrop").backdropFilter ===
+                "none" &&
+              getComputedStyle(dialog, "::backdrop").backgroundColor ===
+                "rgba(0, 0, 0, 0)" &&
+              getComputedStyle(dialog).boxShadow !== "none",
+          ),
+      "open preview follows transparent and shadow ON",
+    );
+    assert.equal(await ui.locator("#preview").isVisible(), true);
+    checks.push(
+      "open preview follows independent host background/shadow changes without recreation",
+    );
     await ui.screenshot({ path: path.join(profile, "history-preview.png") });
     await ui.mouse.click(8, 8);
     assert.equal(await ui.locator("#preview").isVisible(), false);
-    assert(
-      await ui
-        .getByRole("button", { name: /を拡大$/ })
-        .first()
-        .evaluate((button) => button === document.activeElement),
+    await until(
+      () =>
+        ui
+          .getByRole("button", { name: /を拡大$/ })
+          .first()
+          .evaluate((button) => button === document.activeElement),
+      "preview focus restored after deferred settings update",
     );
     await ui
       .getByRole("button", { name: /を拡大$/ })
@@ -923,7 +966,7 @@ const previewSize = async () => {
     await session.send("Emulation.clearDeviceMetricsOverride");
     await session.detach();
     await ui
-      .getByRole("button", { name: "壁紙の操作に戻る", exact: true })
+      .getByRole("button", { name: "設定を開く", exact: true })
       .click()
       .catch((error) => {
         if (!ui.isClosed()) throw error;
@@ -933,14 +976,86 @@ const previewSize = async () => {
       async () =>
         (await main.evaluate(() => window.dock.snapshot())).navigation.route ===
         "settings",
-      "Applet management route",
+      "Applet settings route",
     );
     await main
-      .getByRole("heading", { name: "Applet管理", exact: true })
+      .getByRole("table", { name: "モニターごとの画像設定", exact: true })
       .waitFor();
     assert.equal(
-      (await main.evaluate(() => window.dock.snapshot())).navigation.appletId,
+      (await main.evaluate(() => window.dock.settingsEditing())).pageId,
+      "applet:" + manifest.id,
+    );
+    await instance.save({ host: { theme: "light" } });
+    const links = main.getByRole("button", {
+      name: /をコマンドパレットで表示$/,
+    });
+    await until(
+      () => links.count().then((count) => count === 3),
+      "pause command links ready",
+    );
+    assert.equal(await links.count(), 3);
+    const paused = await main.evaluate(
+      (id) =>
+        window.dock
+          .snapshot()
+          .then((state) => state.settings.value.extensions[id].settings.paused),
       manifest.id,
+    );
+    await links.first().scrollIntoViewIfNeeded();
+    await main.screenshot({
+      path: path.join(profile, "wallpaper-settings-links.png"),
+    });
+    for (const [index, suffix] of ["on", "off", "toggle"].entries()) {
+      const target = manifest.id + ".settings.paused." + suffix;
+      await links.nth(index).click();
+      const palette = await overlayPage(main);
+      await palette
+        .locator(
+          `[role=option][data-command-id="${target}"][aria-selected=true]`,
+        )
+        .waitFor();
+      assert.equal(await palette.getByRole("combobox").inputValue(), target);
+      await palette.getByRole("combobox").press("Escape");
+      await until(
+        () => overlayClosed(palette),
+        "command link palette dismissed",
+      );
+      await until(
+        () =>
+          links
+            .nth(index)
+            .evaluate((button) => button === document.activeElement),
+        "command link focus restored",
+      );
+    }
+    assert.equal(
+      await main.evaluate(
+        (id) =>
+          window.dock
+            .snapshot()
+            .then(
+              (state) => state.settings.value.extensions[id].settings.paused,
+            ),
+        manifest.id,
+      ),
+      paused,
+      "opening links does not execute pause commands",
+    );
+    const windowsSection = main.locator("details").filter({
+      has: main.getByText("Windowsの背景", { exact: true }),
+    });
+    if (!(await windowsSection.evaluate((section) => section.open)))
+      await windowsSection.locator("summary").click();
+    const backgroundAction = main.getByRole("button", {
+      name: "Windowsの背景設定を開く",
+      exact: true,
+    });
+    await backgroundAction.scrollIntoViewIfNeeded();
+    await main.screenshot({
+      path: path.join(profile, "wallpaper-background-action.png"),
+    });
+    checks.push(
+      "history opens its own settings; three command links select without execution and restore focus; background action uses the shared filled surface",
     );
     await main.evaluate(
       (id) => window.dock.executeCommand(id + ".history"),

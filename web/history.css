@@ -304,11 +304,6 @@ h1 {
   overflow-wrap: anywhere;
   font-size: 13px;
 }
-footer {
-  color: var(--muted);
-  font-size: 11px;
-  padding-top: 26px;
-}
 dialog {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -319,7 +314,11 @@ dialog {
   max-width: calc(100vw - 32px);
 }
 dialog::backdrop {
-  background: #11182799;
+  background: transparent;
+  backdrop-filter: var(--appdock-overlay-filter, none);
+}
+:root[data-overlay-shadow="off"] dialog {
+  box-shadow: none;
 }
 .dialog-header {
   display: flex;

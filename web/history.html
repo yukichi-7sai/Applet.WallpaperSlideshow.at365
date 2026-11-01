@@ -23,10 +23,10 @@
         <button
           id="home"
           class="button quiet"
-          title="壁紙の操作に戻る"
-          aria-label="壁紙の操作に戻る"
+          title="設定を開く"
+          aria-label="設定を開く"
         >
-          <span data-icon="back"></span><span>壁紙の操作</span>
+          <span data-icon="settings"></span><span>設定を開く</span>
         </button>
       </header>
       <div id="error" class="error" role="alert" hidden></div>
@@ -90,7 +90,6 @@
           <p id="empty-message"></p>
         </div>
       </section>
-      <footer>履歴はAppletの実行中だけ保持されます。</footer>
     </main>
     <dialog id="preview" class="preview-dialog" aria-labelledby="preview-title">
       <div class="dialog-header">
@@ -121,8 +120,7 @@
         <button id="delete-cancel" class="button secondary" autofocus>
           キャンセル</button
         ><button id="delete-confirm" class="button danger">
-          <span data-icon="trash"></span
-          ><span id="delete-confirm-label">ごみ箱へ移す</span>
+          <span id="delete-confirm-label">ごみ箱へ移す</span>
         </button>
       </div>
     </dialog>

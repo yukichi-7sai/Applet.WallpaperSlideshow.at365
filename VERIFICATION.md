@@ -1,5 +1,21 @@
 # 検証記録
 
+## 2026-11-01: 履歴と設定の表示調整のコミット前照合
+
+- 利用者から表示調整の受入を確認された。実装入力と完全ログ、native fixture、発行した本体0.114.0/壁紙0.11.0の全704ファイル・ZIP/feedとGUI結果のSHA256が一致し、Release build・native回帰/RPC・JS11件と、ソース/固定EXEの履歴/設定13群・NASを模した削除13群・固定自動更新6群を再利用する。本体の標準166ファイル1,492件も、再利用と未実施分の追加でfail/skip 0が揃った。
+- 今回の壁紙13ファイルと共通UI APIの本体17ファイルだけを別々にコミットし、stage/commit treeと作業内容を照合する。製品修正・版更新・再発行はない。共通の再利用・追加回帰・最終treeは`../AppDock.at365/.artifacts/commit-validation-wallpaper-history-ui-20261101/`を正本とする。push・Release・実利用deployは行わない。
+
+## 2026-11-01: 履歴と設定画面の表示調整 0.11.0
+
+- 自動更新ON/OFFを先に`41d4b1c`へコミットし、その差分を今回へ混ぜずに着手。削除確定ボタンの空アイコン領域を除いて文字を中央に置き、右上を「設定を開く」へ変更した。homeの既存IDとView/メモリの回収を維持し、`Ui.OpenSettingsAsync`でWallpaperSlideshowの設定本文へ直接移る。履歴ページ下部の保持期間の文言を削除した。
+- プレビューと削除確認は既存の共通preloadから背景/影を受け取り、透明/2pxブラーと影ON/OFFへ表示中も追従する。設定の「停止」の説明にON/OFF/toggleの共通コマンドリンクを追加し、開いた時点では実行せず、取消後のフォーカスを戻す。Windows背景設定ボタンは既存のfilled面を使い、ライトでグレーとした。
+- 設定を直接開く本体0.114.0・SDK/Runtime 0.28.0のAPIを使うため、最低本体版を0.114.0へ上げ、0.10.0→0.11.0へマイナー更新。設定キー/既定値/保存形式・壁紙エンジンは変更していない。詳細と共通API/版更新の判断は`../AppDock.at365/docs/applet-pages.md`と本体の検証記録。
+- 発行前レビューで、設定変更を保留したプレビューを閉じるとフォーカスが消える場合を修正した。更新処理の完了後に復帰し、新しい操作先のフォーカス・非表示状態を保護する。本体側も、履歴を破棄したときの既定ページへの移動と設定選択との競合を修正し、表示本文と編集状態の一致を確認した。阻害指摘なし。
+- Releaseの直列Rebuildは警告/エラー0、native回帰/RPCと発行EXEの安全な起動拒否/自身のHWND/正常終了が成功。共通APIと設定/配色/履歴の計97件がfail/skip 0。ソースと発行済み固定EXEの履歴/設定GUI13群・NASを模したGUI13群、固定EXEの自動更新6群が成功した。プレビューの背景/影を開いたまま独立して変更できること、クリック/ドラッグ/Esc/フォーカス、設定直行、3つのリンクの選択/非実行/取消、PC専用保存と画像解放も確認した。中央寄せ、コマンドリンク、グレーボタンを目視確認した。
+- publish.batは終了0。`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ0.11.0を発行し、EXE **51761801 bytes / SHA256 `b0fabed3c29e0fa111edbe9671a8e909cdee9b9c334efc6d48d41e8e18256dfe`**、ZIP **46341094 bytes / SHA256 `979db548495db0845c81dd09bff11dec68d68b0d42b0cc59bca67d74dd1c03a6`**。全11ファイル/元Web資産9件、manifest/feed/EXEの版と最低本体版が一致した。共通ギャラリーの生成元manifestは本体0.114.0へ更新され、JS/CSSは不変。運用者所有の配置スクリプトと利用者データを保持した。
+- 共通の正本は`../AppDock.at365/.artifacts/wallpaper-history-ui-20261101/`のレビュー・完全ログ・入力・発行物照合・整理・最終記録。本repoの`.artifacts/wallpaper-history-ui-20261101/validation.json`から参照する。固定通常/NAS/自動更新の成功profileはそれぞれ`.artifacts/history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793504347256/`、`.artifacts/history-page-ui-network-delete-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793504359085/`、`.artifacts/history-page-ui-refresh-mode-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793504370927/`。一時画像/fixtureの検証であり、実NAS・実壁紙・Explorer再起動・実ロック/RDP・関連付けアプリ/実ごみ箱・Windows背景設定の起動は操作していない。
+- 旧固定コピーの整理は本体と合わせて4件/管理72項目、保護473ファイルのhash一致・失敗0・全フォルダー削除0。結果・画像・設定・data・extensions・manifestと再利用/失敗/調査記録を保持した。今回の履歴/設定表示の差分は未コミットで、push・Release・実利用deployは行っていない。
+
 ## 2026-11-01: 自動更新ON/OFFのコミット前照合
 
 - 0.10.0の実装入力1,094件、完全ログ23件、発行ZIP全11ファイルと配置ファイル、manifest/feed、本体0.113.0の固定配布物をSHA256で照合し、一致した。Release build、native回帰/RPC、JS契約11件、長いパス1,000件、ソース/固定EXEの自動更新GUI6群と従来/NASを模したGUI各11群を再利用する。ホスト・SDK/API・依存は不変で、追加の製品修正・版更新・再発行はない。
