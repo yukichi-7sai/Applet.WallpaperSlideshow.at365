@@ -19,7 +19,7 @@ execFileSync(helper, ['--create-memory-source', path.join(source, 'fixture.png')
 const inspect = () => JSON.parse(execFileSync(helper, ['--inspect-desktop'], { encoding: 'utf8', windowsHide: true }).trim());
 const surfaces = pid => JSON.parse(execFileSync(helper, ['--inspect-surfaces', String(pid)], { encoding: 'utf8', windowsHide: true }).trim());
 const snapshot = () => JSON.parse(execFileSync(helper, ['--snapshot-background'], { encoding: 'utf8', windowsHide: true }).trim());
-const settings = { intervalSeconds: 1, historyLimit: 30, paused: false,
+const settings = { intervalSeconds: 1, historyLimit: 30, slideshowEnabled: true,
   monitors: inspect().monitors.map(() => ({ Folders: [source], Mode: 'Fill' })) };
 const before = snapshot();
 const child = spawn(fixed, [], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -67,7 +67,7 @@ async function until(fn, label) {
     await until(() => panel?.facts.some(f => f.label === '状態' && f.value.includes('再接続待ち')), 'surface loss');
     await until(() => panel?.facts.some(f => f.label === '状態' && f.value === '表示中'), 'surface recovery');
     checks.push('actual owned HWND destruction / reconnect / retained frame');
-    await peer.request('settings.changed', { ...settings, paused: true });
+    await peer.request('settings.changed', { ...settings, slideshowEnabled: false });
     await until(() => surfaces(child.pid).windows.length === 0, 'manual pause');
     await new Promise(r => setTimeout(r, 1200));
     assert.equal(surfaces(child.pid).windows.length, 0);

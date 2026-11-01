@@ -97,7 +97,7 @@ namespace at365.WallpaperSlideshow
             var images = ReadImageSizes(paths);
             if (images.Count == 0) return;
 
-            DrawTile(gMain, images.ToArray(), drawRect, path => pushHistory(monitorIndex, path));
+            DrawTile(gMain, images.ToArray(), drawRect, config.TileMargin, path => pushHistory(monitorIndex, path));
         }
 
         private static List<string> CollectImagePaths(string? primaryImage, Queue<string> queue, int tileCount)
@@ -201,7 +201,7 @@ namespace at365.WallpaperSlideshow
         /// <summary>
         /// Draws images in a tiled layout.
         /// </summary>
-        private void DrawTile(Graphics g, TileImage[] images, Rectangle rect, Action<string> pushHistory)
+        private void DrawTile(Graphics g, TileImage[] images, Rectangle rect, float tileMargin, Action<string> pushHistory)
         {
             var layout = FindBestTileLayout(images, rect);
             if (layout == null) return;
@@ -218,7 +218,7 @@ namespace at365.WallpaperSlideshow
 
             for (int i = 0; i < layout.Rows.Length; i++)
             {
-                DrawRowWithMargin(g, layout.Rows[i], rect, layout.RowHeights[i], y, pushHistory);
+                DrawRowWithMargin(g, layout.Rows[i], rect, layout.RowHeights[i], y, tileMargin, pushHistory);
                 y += layout.RowHeights[i] + gapY;
             }
         }
@@ -327,7 +327,7 @@ namespace at365.WallpaperSlideshow
             return -1f;
         }
 
-        private void DrawRowWithMargin(Graphics g, TileImage[] row, Rectangle rect, float rowHeight, float y, Action<string> pushHistory)
+        private void DrawRowWithMargin(Graphics g, TileImage[] row, Rectangle rect, float rowHeight, float y, float tileMargin, Action<string> pushHistory)
         {
             if (row.Length == 0) return;
 
@@ -340,7 +340,7 @@ namespace at365.WallpaperSlideshow
             {
                 float w = widths[i];
                 var layoutRect = new RectangleF(x, y, w, rowHeight);
-                float margin = _config.TileMargin / 2f;
+                float margin = tileMargin / 2f;
                 var inner = RectangleF.Inflate(layoutRect, -margin, -margin);
                 if (inner.Width <= 0 || inner.Height <= 0) continue;
 

@@ -65,7 +65,7 @@ settings.updates.checkAppletsOnStartup = false;
 settings.extensions[manifest.id] = {
   enabled: true,
   settings: {
-    paused: true,
+    slideshowEnabled: false,
     thumbnailWidth: 1000,
     thumbnailHeight: 1000,
     historyPageSize: 7,
@@ -994,11 +994,11 @@ const previewSize = async () => {
       "pause command links ready",
     );
     assert.equal(await links.count(), 3);
-    const paused = await main.evaluate(
+    const slideshowEnabled = await main.evaluate(
       (id) =>
         window.dock
           .snapshot()
-          .then((state) => state.settings.value.extensions[id].settings.paused),
+          .then((state) => state.settings.value.extensions[id].settings.slideshowEnabled),
       manifest.id,
     );
     await links.first().scrollIntoViewIfNeeded();
@@ -1006,7 +1006,7 @@ const previewSize = async () => {
       path: path.join(profile, "wallpaper-settings-links.png"),
     });
     for (const [index, suffix] of ["on", "off", "toggle"].entries()) {
-      const target = manifest.id + ".settings.paused." + suffix;
+      const target = manifest.id + ".settings.slideshowEnabled." + suffix;
       await links.nth(index).click();
       const palette = await overlayPage(main);
       await palette
@@ -1034,11 +1034,11 @@ const previewSize = async () => {
           window.dock
             .snapshot()
             .then(
-              (state) => state.settings.value.extensions[id].settings.paused,
+              (state) => state.settings.value.extensions[id].settings.slideshowEnabled,
             ),
         manifest.id,
       ),
-      paused,
+      slideshowEnabled,
       "opening links does not execute pause commands",
     );
     const windowsSection = main.locator("details").filter({
@@ -1080,9 +1080,8 @@ const previewSize = async () => {
       page: main,
       id: manifest.id,
       keys: [
-        "paused",
+        "slideshowEnabled",
         "intervalSeconds",
-        "tileMargin",
         "historyLimit",
         "thumbnailWidth",
         "thumbnailHeight",
@@ -1090,7 +1089,6 @@ const previewSize = async () => {
         "historyPageSize",
       ],
       changes: {
-        tileMargin: 12,
         historyLimit: 25,
         thumbnailWidth: 32,
         thumbnailHeight: 24,
@@ -1098,11 +1096,12 @@ const previewSize = async () => {
         historyPageSize: 2,
       },
       invalid: [
-        { thumbnailWidth: 0, tileMargin: 13 },
+        { thumbnailWidth: 0 },
         { historyPageSize: 1001 },
         { monitors: [] },
       ],
-      hidden: ["monitors"],
+      hidden: ["monitors", "tileMargin", "paused"],
+      switches: ["slideshowEnabled"],
     });
     await ready(2);
     await until(
@@ -1117,7 +1116,7 @@ const previewSize = async () => {
       "native thumbnail settings from MCP",
     );
     checks.push(
-      "MCP eight settings / invalid and private values rejected / live native thumbnail dimensions",
+      "MCP seven settings / invalid and private values rejected / live native thumbnail dimensions",
     );
     await main.evaluate(
       (id) => window.dock.toggleExtension(id, false),

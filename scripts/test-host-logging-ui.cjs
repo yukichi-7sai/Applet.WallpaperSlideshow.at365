@@ -38,7 +38,7 @@ async function run(fixture) {
   settings.host.notifications = false;
   settings.keybindings = [];
   settings.gestures.enabled = false;
-  settings.extensions[manifest.id] = { enabled: true, settings: fixture ? { paused: true } : { monitors: '{' } };
+  settings.extensions[manifest.id] = { enabled: true, settings: fixture ? { slideshowEnabled: false } : { monitors: '{' } };
   fs.writeFileSync(path.join(base, 'settings.json'), JSON.stringify(settings));
   const executable = path.join(base, 'AppDock.at365.exe');
   fs.copyFileSync(portable, executable);

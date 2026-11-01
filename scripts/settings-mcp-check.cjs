@@ -150,6 +150,9 @@ module.exports = async function checkSettings({
       ]) {
         const command = id + ".settings." + key + "." + action;
         assert(catalog.some((c) => c.id === command));
+        if (key === 'slideshowEnabled')
+          assert.equal(catalog.find((c) => c.id === command).title,
+            '壁紙のスライドショーを' + { on: 'ONにする', off: 'OFFにする', toggle: '切り替える' }[action]);
         await call("appdock_execute_command", { id: command });
         assert.equal((await get()).values[key], expected);
       }

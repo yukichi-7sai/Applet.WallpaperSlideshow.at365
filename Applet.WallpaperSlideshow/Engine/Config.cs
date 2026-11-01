@@ -22,6 +22,7 @@ namespace at365.WallpaperSlideshow
             .Distinct(StringComparer.OrdinalIgnoreCase);
         public StretchMode? Mode { get; set; } = StretchMode.Fit;
         public int TileCount { get; set; } = 4;
+        public float TileMargin { get; set; } = 10;
         public int PaddingLeft { get; set; } = 0;
         public int PaddingRight { get; set; } = 0;
         public int PaddingTop { get; set; } = 0;
@@ -40,7 +41,6 @@ namespace at365.WallpaperSlideshow
     {
         public int IntervalSeconds { get; set; } = 60;
         public HistoryConfig History { get; set; } = new HistoryConfig();
-        public float TileMargin { get; set; } = 10;
         public List<MonitorConfig> Monitors { get; set; } = new();
 
         internal static Config Parse(string text)
@@ -73,8 +73,6 @@ namespace at365.WallpaperSlideshow
             Range(History.ThumbnailWidth, 1, 2048, "History.ThumbnailWidth");
             Range(History.ThumbnailHeight, 1, 2048, "History.ThumbnailHeight");
             Range(History.MaxFileNameLength, 1, 1024, "History.MaxFileNameLength");
-            if (!float.IsFinite(TileMargin) || TileMargin < 0 || TileMargin > 4096)
-                throw new InvalidDataException("TileMargin は 0～4096 で指定してください。");
 
             var bounds = monitorBounds?.ToArray();
             for (int i = 0; i < Monitors.Count; i++)
@@ -88,6 +86,8 @@ namespace at365.WallpaperSlideshow
                 if (monitor.Mode is { } mode && !Enum.IsDefined(mode))
                     throw new InvalidDataException($"Monitors[{i}].Mode が不正です。");
                 Range(monitor.TileCount, 1, 64, $"Monitors[{i}].TileCount");
+                if (!float.IsFinite(monitor.TileMargin) || monitor.TileMargin < 0 || monitor.TileMargin > 4096)
+                    throw new InvalidDataException($"Monitors[{i}].TileMargin は 0～4096 で指定してください。");
                 Range(monitor.PaddingLeft, 0, 65535, $"Monitors[{i}].PaddingLeft");
                 Range(monitor.PaddingRight, 0, 65535, $"Monitors[{i}].PaddingRight");
                 Range(monitor.PaddingTop, 0, 65535, $"Monitors[{i}].PaddingTop");

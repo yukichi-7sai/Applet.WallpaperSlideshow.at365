@@ -109,20 +109,20 @@ const fixture = path.join(
     );
     assert.deepEqual(
       panel.actions.slice(0, 3).map((action) => action.command),
-      ["off", "on", "toggle"].map(
-        (value) => "at365.wallpaper-slideshow.settings.paused." + value,
+      ["on", "off", "toggle"].map(
+        (value) => "at365.wallpaper-slideshow.settings.slideshowEnabled." + value,
       ),
     );
     assert.equal(
       panel.facts.find((fact) => fact.label === "状態").value,
       "表示中",
     );
-    await configure({ paused: true });
+    await configure({ slideshowEnabled: false });
     await command("next");
     assert(!diagnostics.includes("FIXTURE_NEXT_WALLPAPER"));
-    await configure({ paused: false });
+    await configure({ slideshowEnabled: true });
     await command("next");
-    await configure({ paused: true });
+    await configure({ slideshowEnabled: false });
     assert.match(
       panel.facts.find((fact) => fact.label === "状態").value,
       /停止中/,

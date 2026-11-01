@@ -39,7 +39,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         await dispatcher.InvokeAsync(() => {
             options.Validate(StableScreensProvider.Screens.Select(s => s.Bounds));
             started = true;
-            engine.Start(options, services.Settings.Get("paused", false));
+            engine.Start(options, !services.Settings.Get("slideshowEnabled", true));
             config = options;
             fingerprint = SlideshowOptions.Fingerprint(options);
         }, token);
@@ -76,7 +76,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         var services = context;
         if (services is null) return;
         try {
-            await dispatcher.InvokeAsync(() => engine.Pause(services.Settings.Get("paused", false)), token);
+            await dispatcher.InvokeAsync(() => engine.Pause(!services.Settings.Get("slideshowEnabled", true)), token);
             var options = SlideshowOptions.Read(services.Settings);
             await dispatcher.InvokeAsync(() => {
                 options.Validate(StableScreensProvider.Screens.Select(s => s.Bounds));
@@ -103,9 +103,9 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
                 new PanelFact("画像ソース", string.Join(" / ", config?.Monitors.Select((m, i) => $"{i + 1}: {m.SourceFolders().Count()}フォルダー") ?? [])),
                 new PanelFact("バージョン", typeof(WallpaperApplet).Assembly.GetName().Version!.ToString(3)),
             }, new[] {
-                new PanelAction("開始／再開", services.ExtensionId + ".settings.paused.off"),
-                new PanelAction("停止", services.ExtensionId + ".settings.paused.on"),
-                new PanelAction("開始／停止を切り替え", services.ExtensionId + ".settings.paused.toggle"),
+                new PanelAction("開始／再開", services.ExtensionId + ".settings.slideshowEnabled.on"),
+                new PanelAction("停止", services.ExtensionId + ".settings.slideshowEnabled.off"),
+                new PanelAction("開始／停止を切り替え", services.ExtensionId + ".settings.slideshowEnabled.toggle"),
                 new PanelAction("次の壁紙に更新", services.ExtensionId + ".next"),
                 new PanelAction("データフォルダーを開く", services.ExtensionId + ".data"),
             }), token);

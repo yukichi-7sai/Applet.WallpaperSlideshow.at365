@@ -14,7 +14,7 @@ manifest.entry = 'Applet.WallpaperSlideshow.RegressionTests.exe'; manifest.start
 fs.writeFileSync(path.join(folder, 'extension.json'), JSON.stringify(manifest));
 const settings = require(path.join(hostRoot, 'out/main/shared/settings-schema')).createDefaultSettings();
 settings.host.hardwareAcceleration = false; settings.globalShortcutCommands = [];
-settings.extensions[manifest.id] = { enabled: true, settings: { paused: true } };
+settings.extensions[manifest.id] = { enabled: true, settings: { slideshowEnabled: false } };
 fs.writeFileSync(path.join(profile, 'settings.json'), JSON.stringify(settings));
 const original = path.resolve(process.argv[2] || path.join(getPublishDirectory(hostRoot), 'AppDock.at365.exe'));
 const executable = path.join(profile, 'AppDock.at365.exe'); fs.copyFileSync(original, executable);
@@ -51,7 +51,7 @@ async function until(fn, label) {
     await until(async () => (await own()).intervalSeconds === 77, 'immediate saved setting');
     await open.click();
     await page.getByRole('status').filter({ hasText: 'Windowsの背景設定を開きました。' }).waitFor();
-    assert.equal((await own()).paused, true);
+    assert.equal((await own()).slideshowEnabled, false);
     assert.equal((await own()).intervalSeconds, 77);
     await page.screenshot({ path: path.join(profile, 'settings.png') });
     await page.setViewportSize({ width: 900, height: 760 });

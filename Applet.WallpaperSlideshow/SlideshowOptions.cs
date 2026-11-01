@@ -12,7 +12,6 @@ internal static class SlideshowOptions
         var text = monitors.ValueKind == JsonValueKind.String ? monitors.GetString()! : monitors.GetRawText();
         var config = Config.Parse("{\"Monitors\":" + text + "}");
         config.IntervalSeconds = settings.Get("intervalSeconds", 60);
-        config.TileMargin = settings.Get("tileMargin", 10f);
         config.History = new HistoryConfig {
             Limit = settings.Get("historyLimit", 30),
             ThumbnailWidth = settings.Get("thumbnailWidth", 480),

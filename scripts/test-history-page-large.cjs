@@ -44,7 +44,7 @@ const exited = new Promise((resolve, reject) => {
   try {
     await peer.request("activate", {
       id: "at365.wallpaper-slideshow",
-      settings: { paused: true, historyLimit: 1000, historyPageSize: 1000 },
+      settings: { slideshowEnabled: false, historyLimit: 1000, historyPageSize: 1000 },
     });
     const index = values.get("history"),
       monitor = index.monitors[0];
@@ -57,12 +57,12 @@ const exited = new Promise((resolve, reject) => {
     assert.match(paths.at(-1), /0\.png$/);
     const previousKeys = [...values.keys()];
     values.set("history-snapshot", { generations: [index.generation] });
-    await peer.request("settings.changed", { paused: true, historyLimit: 30 });
+    await peer.request("settings.changed", { slideshowEnabled: false, historyLimit: 30 });
     assert.equal(values.get("history").monitors[0].count, 30);
     assert(monitor.chunks.every((key) => values.has(key)));
     assert.equal(monitor.chunks.flatMap((key) => values.get(key)).length, 1000);
     values.delete("history-snapshot");
-    await peer.request("settings.changed", { paused: true, historyLimit: 31 });
+    await peer.request("settings.changed", { slideshowEnabled: false, historyLimit: 31 });
     assert(
       previousKeys
         .filter((key) => key !== "history")

@@ -46,6 +46,27 @@ internal static class AppletTests
         var structured = SlideshowOptions.Read(settings);
         Check(structured.Monitors[0].Mode == StretchMode.Tile && structured.Monitors[0].TileCount == 13 && structured.Monitors[0].PaddingBottom == 40, "Structured/legacy per-monitor settings lost");
         Check(structured.History.ThumbnailWidth == 1000 && structured.History.MaxFileNameLength == 1024, "Original history settings constrained");
+        settings.Values["tileMargin"] = 300;
+        Check(SlideshowOptions.Read(settings).Monitors[0].TileMargin == 10, "Common margin was inherited instead of monitor default");
+        settings.Values["monitors"] = new[] {
+            new { Folder = parent, Mode = "Tile", TileCount = 1, TileMargin = 0f },
+            new { Folder = parent, Mode = "Tile", TileCount = 1, TileMargin = 40f }
+        };
+        var perMonitor = SlideshowOptions.Read(settings);
+        var renderer = new WallpaperRenderer(); renderer.SetConfig(perMonitor);
+        using (var bitmap = new Bitmap(240, 80)) {
+            using var graphics = Graphics.FromImage(bitmap); graphics.Clear(Color.Black);
+            Rectangle[] screens = [new(0, 0, 120, 80), new(120, 0, 120, 80)];
+            for (var i = 0; i < screens.Length; i++)
+                renderer.ComposeMonitor(i, Path.Combine(parent, "a.png"), graphics, new Rectangle(0, 0, 240, 80), screens, new Queue<string>(), (_, _) => { });
+            Check(bitmap.GetPixel(5, 40).R > 100 && bitmap.GetPixel(125, 40).R == 0 && bitmap.GetPixel(180, 40).R > 100,
+                "Two monitors did not render their independent tile margins");
+        }
+        foreach (var margin in new[] { -1f, 4097f, float.NaN }) {
+            perMonitor.Monitors[1].TileMargin = margin;
+            try { perMonitor.Validate(); throw new Exception("Invalid monitor margin accepted"); }
+            catch (InvalidDataException) { }
+        }
         settings.Values["monitors"] = new[] { new { Folder = "relative/path" } };
         Check(SlideshowOptions.Read(settings).Monitors[0].SourceFolders().Single() == Path.GetFullPath("relative/path"), "Legacy relative path lost");
         HistoryManager.Instance.EnsureInitialized(Screen.AllScreens);

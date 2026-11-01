@@ -1,5 +1,23 @@
 # 検証記録
 
+## 2026-11-01: モニター別タイル設定・再生ON/OFFのコミット前照合
+
+- 今回のmain差分20ファイルをレビュー。モニター別TileMarginと既定10px/旧値不使用、Tile時の編集条件と値保持、slideshowEnabledのON再生/OFF停止、共通UIと最低本体0.115.0、描画/ロック/リモート停止条件を確認した。利用説明の冒頭に残っていた旧「停止」の表記だけを訂正。製品コードの追加修正なし、0.12.0の発行物は不変。
+- 実装時の全入力SHA256・native回帰8群/RPC6群の完全ログ、固定設定GUI9群・履歴/MCP GUI13群、発行物のEXE/ZIP/manifest/feedを照合し、成功を再利用。履歴JS契約11件は不変の4入力と以前の成功ログ（全13件成功）を照合して再利用。実壁紙/実NAS/Explorer再起動/物理ロック/RDP/実ごみ箱は操作しない。
+- 本体の標準全167ファイル1,496件は、追加123ファイル1,261件と再利用235件でfail/skip 0。追加試験前後の入力一致、共通ギャラリーのJS/CSS不変・生成元0.115.0、パネル/説明リンクと新しい生成コマンド名・保存を確認。
+- 正本は本体`.artifacts/commit-validation-wallpaper-settings-20261101/`と自身の同名フォルダー。実装時の原ログ/入力/GUI/成果物証跡への参照を保持し、検証記録の追記以外は再発行しない。旧実行コピーの整理は実装時に完了し、新規GUIコピーなし。対象20ファイルをmainへコミットし、SHA/treeとstage一致をcommit.jsonへ記録する。push/Release/実利用deployなし。
+
+## 2026-11-01: モニター別タイル余白・Tile時の編集・再生スイッチ 0.12.0
+
+- mainで実装。開始時の既存差分は共通ギャラリーmanifestの生成元0.114.2だけで、追跡先との履歴差は0。自動pull/stash/破棄をせず保持し、標準buildで生成元を本体0.115.0へ更新。JS/CSSの内容は不変。
+- `TileMargin`をモニターごとの設定/検証/描画へ移し、既定10px・0～4096pxとした。旧共通tileMarginは参照せず、既存のモニターは10pxになる。TileCountとTileMarginはMode=Tile時だけ編集でき、他モードでも値を保持。共通ダイアログのOK/取消・競合・フォーカスを維持。
+- 「壁紙のスライドショー」は`slideshowEnabled`、既定true、ONで再生・OFFで停止。生成コマンドはsettings.slideshowEnabled.on/off/toggleへ変更し、パネルと説明リンクを更新。旧pausedと共通tileMarginは保存データから削除せず参照対象から外す。旧pausedの生成コマンドは提供しない。画像設定の検証前に手動停止を反映し、ロック/リモートの独立した停止理由は保持。設定の追加/削除と最低本体版0.115.0への引上げにより0.11.0→0.12.0。
+- 発行前レビューでmodel/validation/render、設定/公開コマンド、共通入力条件、既定値・保存境界・最低版を照合し、製品の阻害指摘なし。native回帰8群終了0。2画面で余白0/40pxの描画差、旧共通値300を継承しない10px、負値/上限超過/NaN拒否を確認。RPC6群と発行nativeの不正設定拒否・限定HWND終了処理・正常終了も成功。
+- 固定本体0.115.0と発行Appletで設定GUI9群成功（`.artifacts/monitor-list-ui-1793512989188/`）。10px、Tile時のみ入力、24/48pxの独立保存/再表示、モード切替時の値保持、取消・競合・並べ替え・フォーカス・明暗/狭幅を確認。旧GUI手順の画面名/操作/保存先/配布コピー/既定省略を修正して成功。固定本体/発行Web資産/native fixtureの履歴GUI13群成功（`.artifacts/history-page-ui-1793513004079/`）。MCP7設定・公開schema・旧/非公開キー拒否・権限/dryRun/競合・新しいコマンド名とON/OFF/toggle保存・nativeサムネイル反映を確認。
+- publish.bat終了0、`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ発行。EXE SHA256 `dd104fed97e80e8d433889c0bbf2a592255b6bde87a9feb44109ce9a96e82375`、ZIP 46341148bytes / SHA256 `cd498646fd32a9ed4b5d93ed066c90a7ff93879ca4ef4e020eed4e5a919efbda`。ZIP全11ファイルと発行物、manifest/feedの版・最低版を照合。配置スクリプトと利用者データ保持。
+- 証跡`.artifacts/monitor-settings-20261101/{validation,review,inputs-before-publish,inputs-final}.json`と各完全ログ。本体側`.artifacts/wallpaper-settings-20261101/cleanup.json`で終了/リンクなし/絶対パスを照合し、旧成功2件と解消済み失敗5件の実行コピーだけ整理。結果/失敗記録/画像/設定/manifestは保持。
+- 実利用の壁紙・画像・設定は変更していない。実背面配置・Explorer再起動・物理ロック/RDP・実NAS/関連付けアプリ/ごみ箱は未実施。commit/push/Release/実利用deployなし。
+
 ## 2026-11-01: 履歴と設定の表示調整のコミット前照合
 
 - 利用者から表示調整の受入を確認された。実装入力と完全ログ、native fixture、発行した本体0.114.0/壁紙0.11.0の全704ファイル・ZIP/feedとGUI結果のSHA256が一致し、Release build・native回帰/RPC・JS11件と、ソース/固定EXEの履歴/設定13群・NASを模した削除13群・固定自動更新6群を再利用する。本体の標準166ファイル1,492件も、再利用と未実施分の追加でfail/skip 0が揃った。

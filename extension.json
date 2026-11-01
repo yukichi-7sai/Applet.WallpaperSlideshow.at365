@@ -5,8 +5,8 @@
   "displayName": "WallpaperSlideshow",
   "icon": "image",
   "tagline": "お気に入りの景色を、デスクトップに。",
-  "version": "0.11.0",
-  "minimumHostVersion": "0.114.0",
+  "version": "0.12.0",
+  "minimumHostVersion": "0.115.0",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",
   "runtime": "native",
@@ -21,10 +21,10 @@
   ],
   "settings": [
     {
-      "title": "停止",
-      "key": "paused",
-      "default": false,
-      "description": "手動停止状態を保存します。[command:at365.wallpaper-slideshow.settings.paused.on]、[command:at365.wallpaper-slideshow.settings.paused.off]、[command:at365.wallpaper-slideshow.settings.paused.toggle]からも操作できます。ロック・リモート接続による停止は別に維持します。",
+      "title": "壁紙のスライドショー",
+      "key": "slideshowEnabled",
+      "default": true,
+      "description": "[command:at365.wallpaper-slideshow.settings.slideshowEnabled.on]、[command:at365.wallpaper-slideshow.settings.slideshowEnabled.off]、[command:at365.wallpaper-slideshow.settings.slideshowEnabled.toggle]からも操作できます。ロック・リモート接続による停止は別に維持します。",
       "type": "boolean",
       "automation": true,
       "generateCommands": [
@@ -97,7 +97,17 @@
           "default": 4,
           "minimum": 1,
           "maximum": 64,
-          "step": 1
+          "step": 1,
+          "enabledWhen": { "key": "Mode", "equals": "Tile" }
+        },
+        {
+          "key": "TileMargin",
+          "title": "タイル間の余白（px）",
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 4096,
+          "enabledWhen": { "key": "Mode", "equals": "Tile" }
         },
         {
           "key": "PaddingLeft",
@@ -147,15 +157,6 @@
         "showIndex": true,
         "confirmDelete": true
       }
-    },
-    {
-      "default": 10,
-      "maximum": 4096,
-      "minimum": 0,
-      "type": "number",
-      "key": "tileMargin",
-      "automation": true,
-      "title": "タイル間の余白（px）"
     },
     {
       "maximum": 1000,
@@ -249,9 +250,8 @@
       "title": "スライドショー",
       "description": "壁紙の再生状態と切り替え間隔を設定します。",
       "settings": [
-        "paused",
-        "intervalSeconds",
-        "tileMargin"
+        "slideshowEnabled",
+        "intervalSeconds"
       ]
     },
     {
