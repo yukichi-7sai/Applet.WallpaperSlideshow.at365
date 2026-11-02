@@ -105,3 +105,7 @@ GUI試験にscripts/settings-mcp-check.cjsによる隔離MCP確認を含みま�
 ## 共通の運用
 
 文書構成・生成物・版更新・配布は[共通手順](../AppDock.at365/docs/development-workflow.md)、[文書方針](../AppDock.at365/docs/documentation.md)、[発行と配置](../AppDock.at365/docs/publishing.md)、[更新パッケージ](../AppDock.at365/docs/updates.md)、[生成物の整理](../AppDock.at365/DEVELOPMENT.md#作業完了時のテストフォルダー整理)を参照する。Applet固有の実行条件と結果は[検証記録](VERIFICATION.md)へ記載する。
+
+## テストの共通実行場所
+
+GUI試験のAppDockは[共通実行場所](../AppDock.at365/docs/testing.md#固定配布物の共通実行場所)を使い、本repoの`.artifacts`をprofile保存rootとして明示します。既存の`--test-profile`等で設定・data・必要なextensionsと結果・ログを分離します。固定build出力を使う試験には追加コピーを作りません。

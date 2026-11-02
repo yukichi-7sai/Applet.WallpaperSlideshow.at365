@@ -3,9 +3,10 @@ const fs = require("node:fs"),
   assert = require("node:assert/strict");
 const root = path.resolve(__dirname, ".."),
   host = path.resolve(root, "../AppDock.at365");
-const { launch, until } = require(
+const { launch: launchHost, until } = require(
   path.join(host, "scripts/page-test-host.cjs"),
 );
+const launch = (profile, portable, environment) => launchHost(profile, portable, environment, path.join(root, '.artifacts'));
 const { overlayPage, overlayClosed } = require(
   path.join(host, "scripts/shell-overlay-helper.cjs"),
 );

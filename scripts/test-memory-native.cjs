@@ -3,14 +3,13 @@ const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const root = path.resolve(__dirname, '..'), host = path.resolve(root, '../AppDock.at365');
+const { prepareTestApplet } = require(path.join(host, 'scripts/copy-host.cjs'));
 const { JsonLinePeer } = require(path.join(host, 'out/main/main/core/rpc.js'));
 const helper = path.join(root, 'Applet.WallpaperSlideshow.RegressionTests/bin/Release/net10.0-windows/Applet.WallpaperSlideshow.RegressionTests.exe');
 const exe = path.resolve(process.argv[2] || path.join(root, 'Applet.WallpaperSlideshow/bin/Release/net10.0-windows/win-x64/Applet.WallpaperSlideshow.at365.exe'));
 const output = path.join(root, '.artifacts', `memory-native-${Date.now()}`);
 fs.mkdirSync(output, { recursive: true });
-const copy = path.join(output, 'native');
-fs.cpSync(path.dirname(exe), copy, { recursive: true });
-const fixed = path.join(copy, path.basename(exe));
+const fixed = prepareTestApplet(exe, output, path.join(root, '.artifacts'));
 const hash = p => createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 assert.equal(hash(exe), hash(fixed));
 // A generated source image belongs to this test. The renderer must only read it.

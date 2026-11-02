@@ -4,6 +4,7 @@ const { createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
 const net = require('node:net');
 const root = path.resolve(__dirname, '..'), hostRoot = path.resolve(root, '../AppDock.at365');
+const { prepareTestHost } = require(path.join(hostRoot, 'scripts/copy-host.cjs'));
 const { _electron: electron, chromium } = require(path.join(hostRoot, 'node_modules/playwright'));
 const { settingsPage, waitForHost } = require(path.join(hostRoot, 'scripts/settings-host-helper.cjs'));
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -24,8 +25,7 @@ const legacy = JSON.stringify([
 settings.extensions[owner] = { enabled: false, settings: { monitors: legacy, intervalSeconds: 60, tileMargin: 300 } };
 const settingsFile = require(path.join(hostRoot, 'scripts/test-settings.cjs')).file(profile);
 fs.writeFileSync(settingsFile, JSON.stringify(settings));
-const executable = process.argv[2] ? path.join(profile, 'AppDock.at365.exe') : require(path.join(hostRoot, 'node_modules/electron'));
-if (process.argv[2]) require(path.join(hostRoot, 'scripts/copy-host.cjs')).copyHost(path.resolve(process.argv[2]), executable);
+const executable = process.argv[2] ? prepareTestHost(path.resolve(process.argv[2]), profile, path.join(root, '.artifacts')) : require(path.join(hostRoot, 'node_modules/electron'));
 const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
 let app, host, page, browser, child;
 const checks = [], errors = [];
