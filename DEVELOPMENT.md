@@ -2,9 +2,9 @@
 
 機能の説明・操作方法・設定・既定値・動作環境は[機能・操作・設定](docs/usage.md)を参照してください。共通の文書構成は[ドキュメント方針](../AppDock.at365/docs/documentation.md)に従います。
 
-## 発行・配置ファイルの保存先
+## 発行先
 
-標準発行先は `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365` です。`publish.bat`はソースrepo、`deploy.bat`は発行先から実行します。配置用ファイル・設定の保持とテンプレートの更新は[共通発行手順](../AppDock.at365/docs/publishing.md)を参照してください。
+標準発行先は `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365` です。`publish.bat`はソースrepoから実行します。詳細は[共通発行手順](../AppDock.at365/docs/publishing.md)を参照してください。
 
 実装時のテスト選択、コミット前の必要回帰、リリース前のコミット/プッシュ確認と検証証跡の再利用は、[本体・Applet共通手順](../AppDock.at365/docs/development-workflow.md)に従います。この文書の試験コマンドは、その段階に応じて実行します。
 
@@ -25,14 +25,13 @@ Windows、.NET 10 SDK、隣の`AppDock.at365`ソースが必要です。
 dotnet build Applet.WallpaperSlideshow.at365.slnx -c Release
 dotnet run --project Applet.WallpaperSlideshow.RegressionTests -c Release
 .\publish.bat
-A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365\deploy-with-gallery.bat "C:\Tools\AppDock"
 ```
 
-発行EXEはwin-x64・自己完結型です。AppDock EXE隣の`extensions/Applet.WallpaperSlideshow.at365`へ配置します。引数なしの`deploy.bat`はGit除外の`deploy.local.txt`先頭行、未指定ならエラーになります。スクリプトは実行中アプリを強制終了しません。AppDockを起動し直すと認識します。
+発行EXEはwin-x64・自己完結型です。AppDockを完全終了し、発行フォルダー一式をEXE隣の`extensions/Applet.WallpaperSlideshow.at365`へコピーします。AppDockを起動し直すと認識します。
 
 `scripts/test-protocol.cjs` / `scripts/test-ui.cjs`はテスト専用エンジンと一時画像を使用し、ユーザーの壁紙・画像フォルダーを変更しません。
 
-EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history-snapshot.js`・`history.css`、`web/vendor/image-gallery/`のJS/CSS/manifestを一式で発行します。配置テンプレートも9つのweb資産をコピーします。再発行は運用者所有の既存deployスクリプトを上書きしません。引数と`deploy.local.txt`は従来と同じです。
+EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history-snapshot.js`・`history.css`、`web/vendor/image-gallery/`のJS/CSS/manifestを一式で発行します。配置時もこれらのweb資産を含めます。
 
 履歴のGUI試験は`scripts/test-history-page-ui.cjs [固定ホストEXE]`、設定一覧は`scripts/test-monitor-list-ui.cjs [固定ホストEXE]`です。`scripts/test-ui.cjs`はこの2本を直列で実行します。履歴はfixtureのnative EXEと一時画像を使い、画像カード・開く／削除・プレビュー・明暗テーマ・ページ送り・表示先の往復・停止時の回収を確認します。実際のごみ箱と関連付けアプリは通常試験で操作しません。
 

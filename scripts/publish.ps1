@@ -25,5 +25,3 @@ Write-Output "Applet output: $taskPublishDirectory"
 
 $taskUpdateHostRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\AppDock.at365'))
 & (Join-Path $taskUpdateHostRoot 'scripts\pack-applet-update.ps1') -SourceDirectory $taskPublishDirectory -OutputDirectory $taskArtifact
-
-Install-PublishedDeployment $taskAppletRoot $taskArtifact

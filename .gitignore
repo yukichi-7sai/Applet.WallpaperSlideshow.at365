@@ -2,5 +2,4 @@
 **/obj/
 publish/
 .artifacts/
-deploy.local.txt
 *.user
