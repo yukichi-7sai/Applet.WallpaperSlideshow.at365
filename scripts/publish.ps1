@@ -16,7 +16,7 @@ foreach ($taskRetiredAsset in @('image-gallery.js', 'gallery.css', 'manifest.jso
     if (-not $taskRetiredPath.StartsWith($taskWebRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid retired gallery asset path.' }
     if (Test-Path -LiteralPath $taskRetiredPath -PathType Leaf) { Remove-Item -LiteralPath $taskRetiredPath }
 }
-foreach ($taskWebAsset in @('history.html', 'history.js', 'history-preferences.js', 'memory-images.js', 'history-snapshot.js', 'history.css', 'history-gallery.js', 'history-gallery.css')) {
+foreach ($taskWebAsset in @('history.html', 'history.js', 'history-preferences.js', 'memory-images.js', 'history-snapshot.js', 'history-navigation.js', 'history.css', 'history-gallery.js', 'history-gallery.css')) {
     if (-not (Test-Path -LiteralPath (Join-Path $taskPublishDirectory ('web\' + $taskWebAsset)) -PathType Leaf)) { throw "Missing page asset: $taskWebAsset" }
     if ((Get-FileHash -LiteralPath (Join-Path $taskPublishDirectory ('web\' + $taskWebAsset))).Hash -ne
         (Get-FileHash -LiteralPath (Join-Path $taskAppletRoot ('web\' + $taskWebAsset))).Hash) { throw "Page asset mismatch: $taskWebAsset" }

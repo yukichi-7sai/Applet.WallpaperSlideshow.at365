@@ -138,8 +138,19 @@ export function mountHistoryGallery(container, options) {
         options.scrollElement.getBoundingClientRect().top -
         value.offset;
   };
+  const reveal = (id) => {
+    const card = cards.get(id);
+    if (!card) return false;
+    card.node.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "instant",
+    });
+    return true;
+  };
   const create = (item) => {
     const node = element("article", "ad-gallery-card");
+    node.tabIndex = -1;
     node.dataset.imageId = item.id;
     const button = element("button", "ad-gallery-image");
     button.type = "button";
@@ -173,12 +184,23 @@ export function mountHistoryGallery(container, options) {
       loading: false,
     };
     button.onclick = () => options.activate(card.item.id);
+    node.addEventListener("click", () => options.select?.(card.item.id), true);
     observer.observe(node);
     return card;
   };
   return {
     anchor,
     restore,
+    reveal,
+    focus(id) {
+      const card = cards.get(id);
+      if (!card) return false;
+      reveal(id);
+      (card.button.disabled ? card.node : card.button).focus({
+        preventScroll: true,
+      });
+      return true;
+    },
     setModel(next) {
       if (disposed) return;
       const saved = anchor();
@@ -209,6 +231,8 @@ export function mountHistoryGallery(container, options) {
           card.requested = 0;
         }
         card.item = item;
+        if (item.selected) card.node.setAttribute("aria-current", "true");
+        else card.node.removeAttribute("aria-current");
         card.button.setAttribute("aria-label", `${item.title}を拡大`);
         card.button.disabled =
           item.selectable === false || item.state !== "ready";
@@ -377,19 +401,61 @@ export function mountHistorySizeControl(container, options) {
 /** Preview content only: the adapter owns the dialog, source authorization and focus. */
 export function mountHistoryPreview(container, options) {
   container.classList.add("ad-gallery-preview");
+  container.tabIndex = -1;
   const stage = element("div", "ad-gallery-preview-stage");
   const picture = element("img", "");
+  picture.draggable = false;
   const status = element("p", "ad-gallery-preview-status");
   status.setAttribute("role", "status");
   const detail = element("p", "ad-gallery-preview-detail");
   const labels = element("p", "ad-gallery-preview-labels");
   stage.append(picture, status);
+  const controls = [-1, 1].map((direction) => {
+    const button = element(
+      "button",
+      `ad-gallery-preview-nav ${direction < 0 ? "previous" : "next"}`,
+      direction < 0 ? "‹" : "›",
+    );
+    button.type = "button";
+    button.setAttribute("aria-label", direction < 0 ? "前の画像" : "次の画像");
+    button.title = direction < 0 ? "前の画像（←）" : "次の画像（→）";
+    let press;
+    button.addEventListener("pointerdown", (event) => {
+      press = { x: event.clientX, y: event.clientY, moved: false };
+    });
+    button.addEventListener("pointermove", (event) => {
+      if (
+        press &&
+        Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6
+      )
+        press.moved = true;
+    });
+    button.addEventListener("pointercancel", () => {
+      press = undefined;
+    });
+    button.addEventListener("click", (event) => {
+      if (event.detail === 0 || (press && !press.moved))
+        options.navigate?.(direction);
+      press = undefined;
+    });
+    stage.append(button);
+    return button;
+  });
   container.append(stage, detail, labels);
   let sequence = 0,
     previous = "",
     disposed = false;
   return {
     setModel(model) {
+      const focused = controls.find(
+        (control) => control === document.activeElement,
+      );
+      controls[0].disabled = !model.canPrevious;
+      controls[1].disabled = !model.canNext;
+      if (focused?.disabled)
+        (controls.find((control) => !control.disabled) ?? container).focus({
+          preventScroll: true,
+        });
       picture.alt = model.title;
       detail.textContent = model.detail;
       labels.textContent = model.labels.join(" / ");

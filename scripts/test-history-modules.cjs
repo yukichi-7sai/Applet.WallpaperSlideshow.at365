@@ -8,6 +8,77 @@ const moduleAt = async (file) =>
       fs.readFileSync(path.join(__dirname, "../web", file)).toString("base64")
   );
 
+test("preview visits the whole monitor history without wrapping or merging repeated paths", async () => {
+  const { HistoryNavigation, historyEntries } = await moduleAt(
+    "history-navigation.js",
+  );
+  const snapshot = {
+    monitors: [{ entries: ["a", "b", "a"].map((path) => ({ path })) }],
+  };
+  const items = historyEntries(snapshot, 0);
+  assert.notEqual(items[0].id, items[2].id);
+  const navigation = new HistoryNavigation();
+  assert.equal(navigation.open(0, items, "absent"), false);
+  assert.equal(navigation.open(0, items, items[0].id), true);
+  assert.equal(navigation.move(-1), false);
+  assert.equal(navigation.move(1), true);
+  assert.equal(navigation.move(1), true);
+  assert.equal(navigation.current.id, items[2].id);
+  assert.equal(navigation.move(1), false);
+  const selected = navigation.close();
+  assert.equal(selected.id, items[2].id);
+  assert.equal(navigation.selected, selected);
+  assert.equal(navigation.move(-1), false);
+});
+
+test("preview keeps its opened order and selection follows surviving entries after refresh", async () => {
+  const { HistoryNavigation, historyEntries } = await moduleAt(
+    "history-navigation.js",
+  );
+  const snapshot = {
+    monitors: [{ entries: ["a", "b"].map((path) => ({ path })) }],
+  };
+  const items = historyEntries(snapshot, 0);
+  const navigation = new HistoryNavigation();
+  navigation.open(0, items, items[0].id);
+  items.reverse();
+  navigation.move(1);
+  assert.equal(navigation.current.path, "b");
+  navigation.close();
+  snapshot.monitors[0].entries.unshift({ path: "new" });
+  navigation.reconcile(snapshot);
+  assert.equal(navigation.selected.index, 2);
+  snapshot.monitors[0].entries.pop();
+  navigation.reconcile(snapshot);
+  assert.equal(
+    navigation.selected,
+    null,
+    "a removed image must not select an unseen replacement",
+  );
+});
+
+test("failed images remain navigable and a one-image monitor has no neighbours", async () => {
+  const { HistoryNavigation, historyEntries } = await moduleAt(
+    "history-navigation.js",
+  );
+  const snapshot = {
+    monitors: [
+      { entries: [{ path: "a" }, { path: "missing" }] },
+      { entries: [{ path: "a" }] },
+    ],
+  };
+  const navigation = new HistoryNavigation();
+  const items = historyEntries(snapshot, 0);
+  items[1].status = "error";
+  navigation.open(0, items, items[1].id);
+  assert.equal(navigation.move(-1), true);
+  const one = historyEntries(snapshot, 1);
+  navigation.open(1, one, one[0].id);
+  assert.equal(navigation.canMove(-1), false);
+  assert.equal(navigation.canMove(1), false);
+  assert.notEqual(navigation.selected.id, items[0].id);
+});
+
 test("history card size retains explicit save, retry, device scope and corrupt-data protection", async () => {
   const { HistoryPreferences } = await moduleAt("history-preferences.js");
   let saved = null,

@@ -6,7 +6,8 @@ const root = path.resolve(__dirname, ".."),
 const { launch: launchHost, until } = require(
   path.join(host, "scripts/page-test-host.cjs"),
 );
-const launch = (profile, portable, environment) => launchHost(profile, portable, environment, path.join(root, '.artifacts'));
+const launch = (profile, portable, environment) =>
+  launchHost(profile, portable, environment, path.join(root, ".artifacts"));
 const { overlayPage, overlayClosed } = require(
   path.join(host, "scripts/shell-overlay-helper.cjs"),
 );
@@ -193,17 +194,24 @@ const previewSize = async () => {
     const stage = document
       .querySelector(".ad-gallery-preview-stage")
       .getBoundingClientRect();
-    const title = document.querySelector("#preview-title").getBoundingClientRect();
-    const close = document.querySelector("#preview-close").getBoundingClientRect();
+    const title = document
+      .querySelector("#preview-title")
+      .getBoundingClientRect();
+    const close = document
+      .querySelector("#preview-close")
+      .getBoundingClientRect();
     return {
       width: bounds.width,
       height: bounds.height,
       viewportWidth: innerWidth,
       viewportHeight: innerHeight,
       accessible:
-        bounds.left >= 0 && bounds.right <= innerWidth &&
-        bounds.top >= 0 && bounds.bottom <= innerHeight &&
-        title.right <= close.left && close.right <= bounds.right &&
+        bounds.left >= 0 &&
+        bounds.right <= innerWidth &&
+        bounds.top >= 0 &&
+        bounds.bottom <= innerHeight &&
+        title.right <= close.left &&
+        close.right <= bounds.right &&
         close.bottom <= bounds.bottom,
       contained:
         stage.left >= bounds.left &&
@@ -235,19 +243,23 @@ const previewSize = async () => {
 };
 const translucentBackdrop = async (selector) => {
   await until(
-    () => ui.locator(selector).evaluate(async (dialog) => {
-      const appearance = await window.appdockAppearance.snapshot();
-      const swatch = document.createElement("span");
-      swatch.style.backgroundColor = appearance.theme.scrim;
-      document.body.append(swatch);
-      const expected = getComputedStyle(swatch).backgroundColor;
-      swatch.remove();
-      const actual = getComputedStyle(dialog, "::backdrop");
-      return dialog.open && appearance.overlayBackground === "translucent" &&
-        actual.backgroundColor === expected &&
-        actual.backgroundColor !== "rgba(0, 0, 0, 0)" &&
-        actual.backdropFilter === "none";
-    }),
+    () =>
+      ui.locator(selector).evaluate(async (dialog) => {
+        const appearance = await window.appdockAppearance.snapshot();
+        const swatch = document.createElement("span");
+        swatch.style.backgroundColor = appearance.theme.scrim;
+        document.body.append(swatch);
+        const expected = getComputedStyle(swatch).backgroundColor;
+        swatch.remove();
+        const actual = getComputedStyle(dialog, "::backdrop");
+        return (
+          dialog.open &&
+          appearance.overlayBackground === "translucent" &&
+          actual.backgroundColor === expected &&
+          actual.backgroundColor !== "rgba(0, 0, 0, 0)" &&
+          actual.backdropFilter === "none"
+        );
+      }),
     "open dialog follows the host translucent background",
   );
 };
@@ -557,6 +569,16 @@ const translucentBackdrop = async (selector) => {
     await ui.evaluate(() => {
       window.thumbnailStability.phase = null;
     });
+    if (!networkDelete)
+      await require("./history-navigation-checks.cjs")({
+        instance,
+        ui,
+        ready,
+        until,
+        profile,
+        id: manifest.id,
+        checks,
+      });
     await instance.save({
       extensionId: manifest.id,
       settings: { historyPageSize: 4 },
@@ -645,25 +667,47 @@ const translucentBackdrop = async (selector) => {
       path.basename(path.dirname(original)).startsWith("WallpaperFixture-"),
       "only test images can be deleted",
     );
-    await instance.save({ extensionId: manifest.id, settings: { maxFileNameLength: 3 } });
+    await instance.save({
+      extensionId: manifest.id,
+      settings: { maxFileNameLength: 3 },
+    });
     await ready(3);
     await until(
-      () => ui.locator(".ad-gallery-card h3").first().textContent().then((text) => text.endsWith("…")),
+      () =>
+        ui
+          .locator(".ad-gallery-card h3")
+          .first()
+          .textContent()
+          .then((text) => text.endsWith("…")),
       "card filename is shortened independently of the preview title",
     );
     await ui
       .getByRole("button", { name: /を拡大$/ })
       .first()
       .click();
-    await ui.getByRole("dialog", { name: path.basename(original), exact: true }).waitFor();
-    assert.equal(await ui.locator("#preview-title").textContent(), path.basename(original));
+    await ui
+      .getByRole("dialog", { name: path.basename(original), exact: true })
+      .waitFor();
+    assert.equal(
+      await ui.locator("#preview-title").textContent(),
+      path.basename(original),
+    );
     await previewSize();
-    const previewSource = await ui.locator("#preview-content img").getAttribute("src");
+    const previewSource = await ui
+      .locator("#preview-content img")
+      .getAttribute("src");
     for (const theme of ["light", "dark"]) {
-      await instance.save({ host: { theme, overlayBackground: "translucent" } });
+      await instance.save({
+        host: { theme, overlayBackground: "translucent" },
+      });
       await translucentBackdrop("#preview");
-      assert.equal(await ui.locator("#preview-content img").getAttribute("src"), previewSource);
-      await ui.screenshot({ path: path.join(profile, `history-preview-translucent-${theme}.png`) });
+      assert.equal(
+        await ui.locator("#preview-content img").getAttribute("src"),
+        previewSource,
+      );
+      await ui.screenshot({
+        path: path.join(profile, `history-preview-translucent-${theme}.png`),
+      });
     }
     await ui.locator("#preview-content img").click();
     assert.equal(await ui.locator("#preview").isVisible(), true);
@@ -738,7 +782,10 @@ const translucentBackdrop = async (selector) => {
     checks.push(
       "preview 85vw/85vh and full filename / image click and drag stay open / backdrop and Esc close / focus restored",
     );
-    await instance.save({ extensionId: manifest.id, settings: { maxFileNameLength: 30 } });
+    await instance.save({
+      extensionId: manifest.id,
+      settings: { maxFileNameLength: 30 },
+    });
     await ready(3);
     await ui.evaluate(() => {
       window.thumbnailStability.phase = "open";
@@ -1043,7 +1090,10 @@ const translucentBackdrop = async (selector) => {
       (id) =>
         window.dock
           .snapshot()
-          .then((state) => state.settings.value.extensions[id].settings.slideshowEnabled),
+          .then(
+            (state) =>
+              state.settings.value.extensions[id].settings.slideshowEnabled,
+          ),
       manifest.id,
     );
     await links.first().scrollIntoViewIfNeeded();
@@ -1079,7 +1129,8 @@ const translucentBackdrop = async (selector) => {
           window.dock
             .snapshot()
             .then(
-              (state) => state.settings.value.extensions[id].settings.slideshowEnabled,
+              (state) =>
+                state.settings.value.extensions[id].settings.slideshowEnabled,
             ),
         manifest.id,
       ),

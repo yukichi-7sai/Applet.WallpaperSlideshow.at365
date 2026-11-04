@@ -31,7 +31,7 @@ dotnet run --project Applet.WallpaperSlideshow.RegressionTests -c Release
 
 `scripts/test-protocol.cjs` / `scripts/test-ui.cjs`はテスト専用エンジンと一時画像を使用し、ユーザーの壁紙・画像フォルダーを変更しません。
 
-EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history-snapshot.js`・`history.css`・`history-gallery.js`・`history-gallery.css`を一式で発行します。発行時はweb資産の存在と本repoのソースとのSHA256一致を確認します。配置時もこれらのweb資産を含めます。
+EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history-snapshot.js`・`history-navigation.js`・`history.css`・`history-gallery.js`・`history-gallery.css`を一式で発行します。発行時はweb資産の存在と本repoのソースとのSHA256一致を確認します。配置時もこれらのweb資産を含めます。
 
 履歴のGUI試験は`scripts/test-history-page-ui.cjs [固定ホストEXE]`、設定一覧は`scripts/test-monitor-list-ui.cjs [固定ホストEXE]`です。`scripts/test-ui.cjs`はこの2本を直列で実行します。履歴はfixtureのnative EXEと一時画像を使い、画像カード・開く／削除・プレビュー・明暗テーマ・ページ送り・表示先の往復・停止時の回収を確認します。実際のごみ箱と関連付けアプリは通常試験で操作しません。
 
@@ -40,6 +40,10 @@ EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・
 表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidth、任意のautoRefreshを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使います。半透明背景の共通CSS変数を使うため、最低ホスト版は0.140.0です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
 
 履歴GUIの`--refresh-mode-only`は、自動更新OFFの表示維持とページ送り、更新ボタン、ONへの即時切替と後続更新、OFFでの再固定、View/ホスト再起動後の端末別保存を確認します。通常の履歴GUIは明示的にONへ切り替えた後に従来の操作を確認します。保持中の旧区間はprivateなメモリStorageで共有し、元画像の取得・画像解放・権限は共通APIを使います。
+
+通常の履歴GUIから`scripts/history-navigation-checks.cjs`を呼び、プレビューのキー/左右端操作、ページをまたぐ移動、端での停止、背景/Esc/閉じる操作後の選択とフォーカス、ページ件数変更後の復帰、元画像の消失、1枚だけの別モニターを確認します。実decodeを一時保留して連続移動の遅延結果を検査します。カードの意図的な入替えは、初期読み込み中のDOM/URL安定性を測る区間と分けます。`test-history-modules.cjs`は重複パスの識別、開いた順序の維持、更新後の選択追従/解除も検査します。
+
+選択スクロールは狭幅の複数行一覧で検証します。一部だけ見えるカードのクリック、プレビューで同じページの下の行/別ページへ移動した時点でのカード可視性、ダイアログ内のフォーカス維持、閉じた後の選択と手動スクロールを確認します。
 
 ## デスクトップのメモリ描画
 

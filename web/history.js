@@ -7,6 +7,7 @@ import {
 import { HistoryPreferences } from "./history-preferences.js";
 import { MemoryImages } from "./memory-images.js";
 import { HistorySnapshot } from "./history-snapshot.js";
+import { HistoryNavigation, historyEntries } from "./history-navigation.js";
 
 const bridge = window.appletPage;
 const call = (operation, input = {}) => bridge.call(operation, input);
@@ -52,7 +53,8 @@ let intent,
   forceHistory = false,
   generationNumber = 0,
   confirmationToken,
-  dialogFocus;
+  dialogFocus,
+  drainPromise;
 let cardWidth = historyGallerySize.initial,
   sizeLoaded = false,
   sizeTouched = false,
@@ -65,6 +67,7 @@ let positionsLoaded = false,
 const positions = new Map();
 const preferences = new HistoryPreferences(call);
 const history = new HistorySnapshot(call);
+const navigation = new HistoryNavigation();
 const imageId = (item) => item.id;
 const assetId = (item) =>
   JSON.stringify([
@@ -83,7 +86,11 @@ const images = new MemoryImages(
   },
 );
 const imageFor = async (id) => {
-  const item = model?.items.find((item) => assetId(item) === id);
+  const current = navigation.current;
+  const item =
+    current && assetId(current) === id
+      ? current
+      : model?.items.find((item) => assetId(item) === id);
   if (!item) throw Error("画像を読み込めません");
   return images.image(
     item,
@@ -91,24 +98,66 @@ const imageFor = async (id) => {
     settings.thumbnailHeight ?? 360,
   );
 };
-const preview = mountHistoryPreview($("preview-content"), { image: imageFor });
+const preview = mountHistoryPreview($("preview-content"), {
+  image: imageFor,
+  navigate: (direction) => {
+    if ($("preview").open && navigation.move(direction)) showPreview();
+  },
+});
+function retainImages() {
+  const files = new Set(model?.items.map((item) => item.path));
+  if (navigation.current) files.add(navigation.current.path);
+  images.retain(files);
+}
+function showPreview() {
+  const item = navigation.current;
+  if (!item) return;
+  const title = item.path.split(/[\\/]/).at(-1);
+  $("preview-title").textContent = title;
+  $("preview-title").title = title;
+  $("preview-position").textContent =
+    `${navigation.session.index + 1} / ${navigation.session.items.length}`;
+  preview.setModel({
+    assetId: assetId(item),
+    title,
+    detail: item.path,
+    labels: [],
+    state: item.status,
+    canPrevious: navigation.canMove(-1),
+    canNext: navigation.canMove(1),
+  });
+  const page = Math.floor(navigation.session.index / model.pageSize);
+  if (page !== model.page) {
+    // Follow the opened snapshot without adopting background history updates.
+    const start = page * model.pageSize;
+    model = {
+      ...model,
+      page,
+      items: navigation.session.items.slice(start, start + model.pageSize),
+    };
+    positions.set(model.monitor, page);
+    render();
+  } else renderCards();
+  retainImages();
+  gallery.reveal(item.id);
+}
 const gallery = mountHistoryGallery($("cards"), {
   scrollElement: document.documentElement,
   image: imageFor,
+  select: (id) => {
+    const item = itemFor(id);
+    if (!item || processing || actionBusy) return;
+    navigation.select(model.monitor, item);
+    renderCards();
+    gallery.reveal(item.id);
+  },
   activate: (id) => {
     const item = itemFor(id);
     if (!item || item.status !== "ready" || processing || actionBusy) return;
     dialogFocus = document.activeElement;
-    const title = item.path.split(/[\\/]/).at(-1);
-    $("preview-title").textContent = title;
-    $("preview-title").title = title;
-    preview.setModel({
-      assetId: assetId(item),
-      title,
-      detail: item.path,
-      labels: [],
-      state: "ready",
-    });
+    const items = readItems(history.current, model.monitor, 0, model.total);
+    if (!navigation.open(model.monitor, items, id)) return;
+    showPreview();
     $("preview").showModal();
   },
   action: (id, command) => {
@@ -158,6 +207,7 @@ function renderCards() {
         "画像を準備しています",
       labels: [],
       state: item.status,
+      selected: navigation.selected?.id === item.id,
       selectable: !processing && !actionBusy,
       actions: [
         { id: "open", title: "開く", disabled: processing || actionBusy },
@@ -226,44 +276,48 @@ function requestPage(monitor, page, refresh = false) {
   intent = { monitor, page };
   generationNumber++;
   forceImages ||= refresh;
-  changed();
+  return changed();
 }
 function changed() {
   refreshQueued = true;
-  if (visible) void drain();
+  if (visible) return drain();
 }
 function readItems(index, monitor, page, pageSize) {
   const previous = new Map(model?.items.map((item) => [item.path, item]) ?? []);
-  const meta = index?.monitors?.[monitor] ?? { count: 0, entries: [] };
   const start = page * pageSize,
     end = start + pageSize;
   const result = [];
-  const duplicates = new Map();
-  meta.entries.slice(start, end).forEach(({ path, storageKey, pointer }) => {
-    const occurrence = duplicates.get(path) ?? 0;
-    duplicates.set(path, occurrence + 1);
-    const name = path.split(/[\\/]/).at(-1),
-      maximum = settings.maxFileNameLength ?? 30;
-    const old = previous.get(path);
-    result.push({
-      id: JSON.stringify([monitor, path, occurrence]),
-      path,
-      storageKey,
-      pointer,
-      title: name.length > maximum ? name.slice(0, maximum) + "…" : name,
-      status:
-        old?.status === "error" && model.generation !== index.generation
-          ? "ready"
-          : (old?.status ?? "ready"),
-      resolution: old?.resolution ?? "",
-      sizeText: old?.sizeText ?? "",
-      error: old?.error ?? "",
+  historyEntries(index, monitor)
+    .slice(start, end)
+    .forEach((entry) => {
+      const { path } = entry;
+      const name = path.split(/[\\/]/).at(-1),
+        maximum = settings.maxFileNameLength ?? 30;
+      const old = previous.get(path);
+      result.push({
+        ...entry,
+        title: name.length > maximum ? name.slice(0, maximum) + "…" : name,
+        status:
+          old?.status === "error" && model.generation !== index.generation
+            ? "ready"
+            : (old?.status ?? "ready"),
+        resolution: old?.resolution ?? "",
+        sizeText: old?.sizeText ?? "",
+        error: old?.error ?? "",
+      });
     });
-  });
   return result;
 }
-async function drain() {
-  if (processing || actionBusy || !visible) return;
+function drain() {
+  if (drainPromise) return drainPromise;
+  if (actionBusy || !visible) return Promise.resolve();
+  drainPromise = drainUpdates().finally(() => {
+    drainPromise = undefined;
+    if (refreshQueued && visible && !actionBusy) void drain();
+  });
+  return drainPromise;
+}
+async function drainUpdates() {
   processing = true;
   busy();
   try {
@@ -339,8 +393,17 @@ async function drain() {
       );
       const pageSize = settings.historyPageSize ?? 4,
         total = index?.monitors?.[monitor]?.count ?? 0;
+      navigation.reconcile(index);
+      const restoreEntry =
+        wanted?.restore &&
+        historyEntries(index, monitor).find(
+          (item) => item.id === wanted.restore.id,
+        );
+      const requestedPage = wanted?.restore
+        ? Math.floor((restoreEntry?.index ?? wanted.restore.index) / pageSize)
+        : (wanted?.page ?? positions.get(monitor) ?? 0);
       const page = Math.min(
-        Math.max(0, wanted?.page ?? positions.get(monitor) ?? 0),
+        Math.max(0, requestedPage),
         Math.max(0, Math.ceil(total / pageSize) - 1),
       );
       if (
@@ -366,7 +429,7 @@ async function drain() {
       };
       positions.set(monitor, page);
       selectedMonitor = monitor;
-      images.retain(new Set(items.map((item) => item.path)));
+      retainImages();
       render();
       const view = { monitor, positions: Object.fromEntries(positions) };
       const encoded = JSON.stringify(view);
@@ -385,7 +448,6 @@ async function drain() {
     processing = false;
     busy();
   }
-  if (refreshQueued && visible && !actionBusy) void drain();
 }
 function renderMonitors() {
   const count = Math.max(1, model.monitorCount);
@@ -468,7 +530,9 @@ async function operate(callback) {
 }
 async function finishDialog(id) {
   const focus = dialogFocus;
+  const target = id === "preview" ? navigation.close() : null;
   $(id).close();
+  const restoredFocus = document.activeElement;
   if (id === "preview")
     preview.setModel({
       assetId: "",
@@ -477,17 +541,34 @@ async function finishDialog(id) {
       labels: [],
       state: "missing",
     });
-  if (deferred) {
+  if (target) {
+    intent = { monitor: target.monitor, restore: target };
+    generationNumber++;
+  }
+  const request = generationNumber;
+  if (deferred || target) {
     deferred = false;
     refreshQueued = true;
     await drain();
   }
-  if (!visible || $("preview").open || $("delete-dialog").open) return;
+  if (
+    !visible ||
+    request !== generationNumber ||
+    $("preview").open ||
+    $("delete-dialog").open
+  )
+    return;
   if (
     document.activeElement !== document.body &&
+    document.activeElement !== restoredFocus &&
     document.activeElement !== focus
   )
     return;
+  if (target) {
+    const item =
+      model?.items.find((item) => item.id === target.id) ?? model?.items[0];
+    if (item && gallery.focus(item.id)) return;
+  }
   if (focus?.isConnected) focus.focus();
   else $("refresh").focus();
 }
@@ -495,6 +576,22 @@ $("preview-close").addEventListener("click", () => finishDialog("preview"));
 $("preview").addEventListener("cancel", (event) => {
   event.preventDefault();
   finishDialog("preview");
+});
+$("preview").addEventListener("keydown", (event) => {
+  if (
+    event.isComposing ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    !["ArrowLeft", "ArrowRight"].includes(event.key)
+  )
+    return;
+  if (event.target.closest("input, textarea, select, [contenteditable='true']"))
+    return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (navigation.move(event.key === "ArrowLeft" ? -1 : 1)) showPreview();
 });
 let previewBackdropPressed = false;
 function onPreviewBackdrop(event) {
@@ -588,6 +685,7 @@ function visibility(value) {
     return;
   }
   confirmationToken = undefined;
+  navigation.close();
   if ($("delete-dialog").open) $("delete-dialog").close();
   if ($("preview").open) $("preview").close();
   preview.setModel({

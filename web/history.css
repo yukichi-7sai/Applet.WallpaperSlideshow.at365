@@ -367,6 +367,7 @@ dialog::backdrop {
   flex-shrink: 0;
 }
 .preview-dialog .dialog-header h2 {
+  flex: 1;
   min-width: 0;
   max-height: 3.9em;
   line-height: 1.3;
@@ -375,6 +376,12 @@ dialog::backdrop {
 }
 .preview-dialog .dialog-header .icon-button {
   flex-shrink: 0;
+}
+#preview-position {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 .preview-stage {
   display: flex;
