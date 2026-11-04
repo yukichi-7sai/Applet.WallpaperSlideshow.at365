@@ -314,7 +314,7 @@ dialog {
   max-width: calc(100vw - 32px);
 }
 dialog::backdrop {
-  background: transparent;
+  background: var(--appdock-overlay-background, transparent);
   backdrop-filter: var(--appdock-overlay-filter, none);
 }
 :root[data-overlay-shadow="off"] dialog {
@@ -356,14 +356,24 @@ dialog::backdrop {
   margin-top: 26px;
 }
 .preview-dialog {
-  width: 60vw;
-  height: 60vh;
+  width: 85vw;
+  height: 85vh;
 }
 .preview-dialog[open] {
   display: flex;
   flex-direction: column;
 }
 .preview-dialog .dialog-header {
+  flex-shrink: 0;
+}
+.preview-dialog .dialog-header h2 {
+  min-width: 0;
+  max-height: 3.9em;
+  line-height: 1.3;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.preview-dialog .dialog-header .icon-button {
   flex-shrink: 0;
 }
 .preview-stage {

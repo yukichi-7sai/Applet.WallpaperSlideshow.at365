@@ -99,9 +99,12 @@ const gallery = mountHistoryGallery($("cards"), {
     const item = itemFor(id);
     if (!item || item.status !== "ready" || processing || actionBusy) return;
     dialogFocus = document.activeElement;
+    const title = item.path.split(/[\\/]/).at(-1);
+    $("preview-title").textContent = title;
+    $("preview-title").title = title;
     preview.setModel({
       assetId: assetId(item),
-      title: item.title,
+      title,
       detail: item.path,
       labels: [],
       state: "ready",

@@ -193,11 +193,18 @@ const previewSize = async () => {
     const stage = document
       .querySelector(".ad-gallery-preview-stage")
       .getBoundingClientRect();
+    const title = document.querySelector("#preview-title").getBoundingClientRect();
+    const close = document.querySelector("#preview-close").getBoundingClientRect();
     return {
       width: bounds.width,
       height: bounds.height,
       viewportWidth: innerWidth,
       viewportHeight: innerHeight,
+      accessible:
+        bounds.left >= 0 && bounds.right <= innerWidth &&
+        bounds.top >= 0 && bounds.bottom <= innerHeight &&
+        title.right <= close.left && close.right <= bounds.right &&
+        close.bottom <= bounds.bottom,
       contained:
         stage.left >= bounds.left &&
         stage.right <= bounds.right &&
@@ -209,20 +216,39 @@ const previewSize = async () => {
     };
   });
   assert(
-    Math.abs(geometry.width - geometry.viewportWidth * 0.6) <= 1,
+    Math.abs(geometry.width - geometry.viewportWidth * 0.85) <= 1,
     JSON.stringify(geometry),
   );
   assert(
-    Math.abs(geometry.height - geometry.viewportHeight * 0.6) <= 1,
+    Math.abs(geometry.height - geometry.viewportHeight * 0.85) <= 1,
     JSON.stringify(geometry),
   );
   assert(geometry.contained);
+  assert(geometry.accessible, JSON.stringify(geometry));
   await until(
     () =>
       ui
         .locator("#preview-content img")
         .evaluate((image) => image.complete && image.naturalWidth > 0),
     "preview decode",
+  );
+};
+const translucentBackdrop = async (selector) => {
+  await until(
+    () => ui.locator(selector).evaluate(async (dialog) => {
+      const appearance = await window.appdockAppearance.snapshot();
+      const swatch = document.createElement("span");
+      swatch.style.backgroundColor = appearance.theme.scrim;
+      document.body.append(swatch);
+      const expected = getComputedStyle(swatch).backgroundColor;
+      swatch.remove();
+      const actual = getComputedStyle(dialog, "::backdrop");
+      return dialog.open && appearance.overlayBackground === "translucent" &&
+        actual.backgroundColor === expected &&
+        actual.backgroundColor !== "rgba(0, 0, 0, 0)" &&
+        actual.backdropFilter === "none";
+    }),
+    "open dialog follows the host translucent background",
   );
 };
 (async () => {
@@ -619,12 +645,26 @@ const previewSize = async () => {
       path.basename(path.dirname(original)).startsWith("WallpaperFixture-"),
       "only test images can be deleted",
     );
+    await instance.save({ extensionId: manifest.id, settings: { maxFileNameLength: 3 } });
+    await ready(3);
+    await until(
+      () => ui.locator(".ad-gallery-card h3").first().textContent().then((text) => text.endsWith("…")),
+      "card filename is shortened independently of the preview title",
+    );
     await ui
       .getByRole("button", { name: /を拡大$/ })
       .first()
       .click();
-    await ui.getByRole("dialog", { name: "壁紙のプレビュー" }).waitFor();
+    await ui.getByRole("dialog", { name: path.basename(original), exact: true }).waitFor();
+    assert.equal(await ui.locator("#preview-title").textContent(), path.basename(original));
     await previewSize();
+    const previewSource = await ui.locator("#preview-content img").getAttribute("src");
+    for (const theme of ["light", "dark"]) {
+      await instance.save({ host: { theme, overlayBackground: "translucent" } });
+      await translucentBackdrop("#preview");
+      assert.equal(await ui.locator("#preview-content img").getAttribute("src"), previewSource);
+      await ui.screenshot({ path: path.join(profile, `history-preview-translucent-${theme}.png`) });
+    }
     await ui.locator("#preview-content img").click();
     assert.equal(await ui.locator("#preview").isVisible(), true);
     const previewImage = await ui.locator("#preview-content img").boundingBox();
@@ -641,7 +681,7 @@ const previewSize = async () => {
       "dragging from the image onto the backdrop does not close",
     );
     await instance.save({
-      host: { overlayBackground: "blur", overlayShadow: false },
+      host: { theme: "light", overlayBackground: "blur", overlayShadow: false },
     });
     await until(
       () =>
@@ -676,7 +716,7 @@ const previewSize = async () => {
     );
     assert.equal(await ui.locator("#preview").isVisible(), true);
     checks.push(
-      "open preview follows independent host background/shadow changes without recreation",
+      "open preview follows light/dark translucent, blur, transparent and shadow settings without replacing its image",
     );
     await ui.screenshot({ path: path.join(profile, "history-preview.png") });
     await ui.mouse.click(8, 8);
@@ -696,8 +736,10 @@ const previewSize = async () => {
     await ui.keyboard.press("Escape");
     assert.equal(await ui.locator("#preview").isVisible(), false);
     checks.push(
-      "preview 60vw/60vh / image click and drag stay open / backdrop and Esc close / focus restored",
+      "preview 85vw/85vh and full filename / image click and drag stay open / backdrop and Esc close / focus restored",
     );
+    await instance.save({ extensionId: manifest.id, settings: { maxFileNameLength: 30 } });
+    await ready(3);
     await ui.evaluate(() => {
       window.thumbnailStability.phase = "open";
     });
@@ -751,6 +793,8 @@ const previewSize = async () => {
     );
     await ui.getByRole("button", { name: "削除", exact: true }).first().click();
     await ui.getByRole("dialog", { name: "画像を削除" }).waitFor();
+    await instance.save({ host: { overlayBackground: "translucent" } });
+    await translucentBackdrop("#delete-dialog");
     assert.equal(await ui.locator("#delete-path").textContent(), original);
     assert.equal(
       await ui
