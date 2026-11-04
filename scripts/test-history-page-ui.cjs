@@ -594,7 +594,7 @@ const previewSize = async () => {
       "host picker/library sizes stay untouched",
     );
     checks.push(
-      "shared cards and size control preserve DOM and slideshow settings with independent PC-local size",
+      "history-owned cards and size control preserve DOM and slideshow settings with independent PC-local size",
     );
     checks.push(
       "independent native page / no history in description / old commands absent / images decoded without panel",

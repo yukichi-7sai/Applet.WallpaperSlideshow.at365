@@ -1,9 +1,9 @@
 import {
-  mountImageGallery,
-  mountGallerySizeControl,
-  mountGalleryPreview,
-  gallerySize,
-} from "./vendor/image-gallery/image-gallery.js";
+  mountHistoryGallery,
+  mountHistorySizeControl,
+  mountHistoryPreview,
+  historyGallerySize,
+} from "./history-gallery.js";
 import { HistoryPreferences } from "./history-preferences.js";
 import { MemoryImages } from "./memory-images.js";
 import { HistorySnapshot } from "./history-snapshot.js";
@@ -53,7 +53,7 @@ let intent,
   generationNumber = 0,
   confirmationToken,
   dialogFocus;
-let cardWidth = gallerySize.initial,
+let cardWidth = historyGallerySize.initial,
   sizeLoaded = false,
   sizeTouched = false,
   autoRefresh = false,
@@ -91,11 +91,10 @@ const imageFor = async (id) => {
     settings.thumbnailHeight ?? 360,
   );
 };
-const preview = mountGalleryPreview($("preview-content"), { image: imageFor });
-const gallery = mountImageGallery($("cards"), {
+const preview = mountHistoryPreview($("preview-content"), { image: imageFor });
+const gallery = mountHistoryGallery($("cards"), {
   scrollElement: document.documentElement,
   image: imageFor,
-  select: () => {},
   activate: (id) => {
     const item = itemFor(id);
     if (!item || item.status !== "ready" || processing || actionBusy) return;
@@ -144,7 +143,6 @@ function renderCards() {
   gallery.setModel({
     cardWidth,
     fit: "cover",
-    selection: "none",
     empty: "",
     items: model.items.map((item) => ({
       id: imageId(item),
@@ -194,7 +192,7 @@ function saveWidth(value) {
     autoRefreshTouched || sizeLoaded ? autoRefresh : undefined,
   );
 }
-const sizeControl = mountGallerySizeControl($("gallery-size"), {
+const sizeControl = mountHistorySizeControl($("gallery-size"), {
   value: cardWidth,
   change: (value) => {
     sizeTouched = true;
@@ -203,7 +201,6 @@ const sizeControl = mountGallerySizeControl($("gallery-size"), {
   },
   commit: saveWidth,
 });
-$("gallery-size").querySelector('input[type="range"]').min = "180";
 function showError(error) {
   $("error").textContent = String(error?.message || error).replace(
     /^Error invoking remote method '[^']+': (?:Error: )?/,
@@ -603,7 +600,6 @@ function visibility(value) {
   gallery.setModel({
     cardWidth,
     fit: "cover",
-    selection: "none",
     empty: "",
     items: [],
   });

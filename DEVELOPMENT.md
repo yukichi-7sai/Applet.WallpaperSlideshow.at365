@@ -19,7 +19,7 @@
 
 Windows、.NET 10 SDK、隣の`AppDock.at365`ソースが必要です。
 
-共通ギャラリーのビルドには本体の固定Node/pnpm環境も使用します。`scripts/sync-gallery.ps1`が本体の`build:image-gallery`を実行し、版・元ソース・出力のSHA256を確認して`web/vendor/image-gallery/`へ同期します。実行時は同梱bundleを使用し、隣のソースrepoは不要です。公開モデル・CSS・adapterの追加規則は[共通ギャラリー](../AppDock.at365/docs/image-gallery.md)を参照してください。
+壁紙履歴のカード・サイズ操作・拡大表示は`web/history-gallery.js`と`web/history-gallery.css`を本repoで直接管理します。本体ギャラリーのビルド・コピー・版同期は行わず、製品のビルドにNode/pnpmは不要です。隣の本体repoはRuntime/SDKと共通発行手順の参照に使用します。GUI/JSの開発試験は引き続き本体の固定Node環境を使用します。履歴固有の構成は[履歴ページ設計](docs/history-page-design.md)を参照してください。
 
 ```powershell
 dotnet build Applet.WallpaperSlideshow.at365.slnx -c Release
@@ -31,7 +31,7 @@ dotnet run --project Applet.WallpaperSlideshow.RegressionTests -c Release
 
 `scripts/test-protocol.cjs` / `scripts/test-ui.cjs`はテスト専用エンジンと一時画像を使用し、ユーザーの壁紙・画像フォルダーを変更しません。
 
-EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history-snapshot.js`・`history.css`、`web/vendor/image-gallery/`のJS/CSS/manifestを一式で発行します。配置時もこれらのweb資産を含めます。
+EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・`memory-images.js`・`history-snapshot.js`・`history.css`・`history-gallery.js`・`history-gallery.css`を一式で発行します。発行時はweb資産の存在と本repoのソースとのSHA256一致を確認します。配置時もこれらのweb資産を含めます。
 
 履歴のGUI試験は`scripts/test-history-page-ui.cjs [固定ホストEXE]`、設定一覧は`scripts/test-monitor-list-ui.cjs [固定ホストEXE]`です。`scripts/test-ui.cjs`はこの2本を直列で実行します。履歴はfixtureのnative EXEと一時画像を使い、画像カード・開く／削除・プレビュー・明暗テーマ・ページ送り・表示先の往復・停止時の回収を確認します。実際のごみ箱と関連付けアプリは通常試験で操作しません。
 

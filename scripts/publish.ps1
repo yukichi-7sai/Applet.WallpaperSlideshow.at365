@@ -9,7 +9,14 @@ $taskProject = [xml](Get-Content -LiteralPath (Join-Path $taskAppletRoot 'Applet
 if ($taskManifest.version -ne $taskProject.Project.PropertyGroup.Version) { throw 'EXEとmanifestのバージョンが一致しません。' }
 dotnet publish (Join-Path $taskAppletRoot 'Applet.WallpaperSlideshow\Applet.WallpaperSlideshow.csproj') -c Release -r win-x64 --self-contained true -o $taskPublishDirectory
 if ($LASTEXITCODE -ne 0) { throw "Wallpaper Applet publish failed ($LASTEXITCODE)" }
-foreach ($taskWebAsset in @('history.html', 'history.js', 'history-preferences.js', 'memory-images.js', 'history-snapshot.js', 'history.css', 'vendor\image-gallery\image-gallery.js', 'vendor\image-gallery\gallery.css', 'vendor\image-gallery\manifest.json')) {
+# Retire only the three previously packaged gallery assets; retain all user data.
+$taskWebRoot = [IO.Path]::GetFullPath((Join-Path $taskPublishDirectory 'web'))
+foreach ($taskRetiredAsset in @('image-gallery.js', 'gallery.css', 'manifest.json')) {
+    $taskRetiredPath = [IO.Path]::GetFullPath((Join-Path $taskWebRoot ('vendor\image-gallery\' + $taskRetiredAsset)))
+    if (-not $taskRetiredPath.StartsWith($taskWebRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid retired gallery asset path.' }
+    if (Test-Path -LiteralPath $taskRetiredPath -PathType Leaf) { Remove-Item -LiteralPath $taskRetiredPath }
+}
+foreach ($taskWebAsset in @('history.html', 'history.js', 'history-preferences.js', 'memory-images.js', 'history-snapshot.js', 'history.css', 'history-gallery.js', 'history-gallery.css')) {
     if (-not (Test-Path -LiteralPath (Join-Path $taskPublishDirectory ('web\' + $taskWebAsset)) -PathType Leaf)) { throw "Missing page asset: $taskWebAsset" }
     if ((Get-FileHash -LiteralPath (Join-Path $taskPublishDirectory ('web\' + $taskWebAsset))).Hash -ne
         (Get-FileHash -LiteralPath (Join-Path $taskAppletRoot ('web\' + $taskWebAsset))).Hash) { throw "Page asset mismatch: $taskWebAsset" }

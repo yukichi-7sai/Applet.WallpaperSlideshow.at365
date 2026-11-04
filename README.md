@@ -6,7 +6,7 @@
 
 ## ビルド方法
 
-Windowsと.NET 10 SDK、隣の `../AppDock.at365` ソースを用意し、本体の固定Node・pnpm環境と依存パッケージを準備します。
+Windowsと.NET 10 SDK、Runtime/SDKを参照する隣の `../AppDock.at365` ソースを用意します。
 
 本リポジトリのルートで実行します。
 
