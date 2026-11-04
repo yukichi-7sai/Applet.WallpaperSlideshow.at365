@@ -18,10 +18,12 @@ const portable =
 const longCache = process.argv.includes("--long-cache");
 const networkDelete = process.argv.includes("--network-delete");
 const refreshMode = process.argv.includes("--refresh-mode-only");
+const settingsNavigation = process.argv.includes("--settings-navigation-only");
 const profile = path.join(
   root,
   ".artifacts",
   "history-page-ui-" +
+    (settingsNavigation ? "settings-navigation-" : "") +
     (refreshMode ? "refresh-mode-" : "") +
     (networkDelete ? "network-delete-" : "") +
     (longCache ? "long-cache-" + "x".repeat(32) + "-" : "") +
@@ -360,6 +362,35 @@ const translucentBackdrop = async (selector) => {
       .getByRole("heading", { name: "最近使った壁紙", exact: true })
       .waitFor();
     await ready(7);
+    if (settingsNavigation) {
+      await require("./settings-navigation-checks.cjs")({
+        instance,
+        ui,
+        owner: manifest.id,
+        ready: () => ready(7),
+        checks,
+      });
+      assert.equal(errors.length, 0, errors.join("\n"));
+      await instance.close();
+      instance = undefined;
+      fs.writeFileSync(
+        path.join(profile, "result.json"),
+        JSON.stringify(
+          {
+            ok: true,
+            checks,
+            settingsNavigation,
+            publishedAssets,
+            hostSha256: hostHash,
+            errors,
+          },
+          null,
+          2,
+        ),
+      );
+      console.log(JSON.stringify({ ok: true, profile, checks }));
+      return;
+    }
     if (refreshMode) {
       let main = instance.main;
       const nativeIndex = () =>
@@ -487,7 +518,15 @@ const translucentBackdrop = async (selector) => {
       });
       const old = ui;
       await ui.locator("#home").click();
-      await until(() => old.isClosed(), "old history disposed");
+      await until(
+        () =>
+          old.evaluate(
+            async () =>
+              !(await window.appletPage.snapshot()).visible &&
+              window.historyLiveUrls.size === 0,
+          ),
+        "hidden history releases images",
+      );
       await main.evaluate(
         (id) => window.dock.executeCommand(id + ".history"),
         manifest.id,
@@ -1057,13 +1096,13 @@ const translucentBackdrop = async (selector) => {
     const session = await instance.app.context().newCDPSession(ui);
     await session.send("Emulation.clearDeviceMetricsOverride");
     await session.detach();
-    await ui
-      .getByRole("button", { name: "設定を開く", exact: true })
-      .click()
-      .catch((error) => {
-        if (!ui.isClosed()) throw error;
-      });
-    await until(() => ui.isClosed(), "history View disposed on home");
+    await require("./settings-navigation-checks.cjs")({
+      instance,
+      ui,
+      owner: manifest.id,
+      ready: () => ready(2),
+      checks,
+    });
     await until(
       async () =>
         (await main.evaluate(() => window.dock.snapshot())).navigation.route ===
@@ -1163,7 +1202,7 @@ const translucentBackdrop = async (selector) => {
       await ui.getByRole("slider", { name: "画像サイズ" }).inputValue(),
       "340",
     );
-    assert.equal(await ui.locator("main").getAttribute("data-marker"), null);
+    assert.equal(await ui.locator("main").getAttribute("data-marker"), marker);
     const saved = await main.evaluate(() => window.dock.snapshot());
     assert(
       saved.settings.value.keybindings.some(
@@ -1250,7 +1289,7 @@ const translucentBackdrop = async (selector) => {
     );
     assert.equal(errors.length, 0, errors.join("\n"));
     checks.push(
-      "CSS 360px layout / home destroys and recreates View / removed binding preserved / stop disposes page",
+      "CSS 360px layout / settings navigation retains View / removed binding preserved / stop disposes page",
     );
     await instance.close();
     instance = undefined;

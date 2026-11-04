@@ -49,13 +49,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         Register(services.ExtensionId + ".background-settings", "Windowsの背景設定を開く",
             ct => dispatcher.InvokeAsync(engine.OpenWindowsBackgroundSettings, ct));
         Register(services.ExtensionId + ".history", "最近使った壁紙を開く", ct => services.Pages.OpenAsync(HistoryPublisher.PageId, ct));
-        Register(services.ExtensionId + ".home", "設定を開く", async ct => {
-            await services.Pages.DisposeAsync(HistoryPublisher.PageId, ct);
-            await services.Storage.SetAsync<object?>(HistoryPublisher.SnapshotKey, null, StorageScope.Memory, ct);
-            await history.PublishAsync(ct);
-            await PublishAsync(ct);
-            await services.Ui.OpenSettingsAsync(ct);
-        });
+        Register(services.ExtensionId + ".home", "設定を開く", ct => services.Ui.OpenSettingsAsync(ct));
         Register(services.ExtensionId + ".data", "壁紙のデータフォルダーを開く", async ct => {
             await dispatcher.InvokeAsync(() => {
                 Directory.CreateDirectory(Const.AppDataFolder);

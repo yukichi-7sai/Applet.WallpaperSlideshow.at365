@@ -1,5 +1,26 @@
 # 検証記録
 
+## 2026-11-05 設定ボタン修正のコミット・プッシュ前照合
+
+- 利用者から実利用が正常に動いたとの確認と、コミット・プッシュ依頼を受領。実装時のApplet67入力/本体1,059入力、完全ログ/終了コード、0.13.3の発行11ファイルと更新ZIP/feedを照合した。
+- Releaseビルド/発行、履歴JS14件、開発GUI2群、発行GUI18群、自動更新GUI6群、RPC6群と発行EXEの起動/終了は成功結果を再利用。nativeコード変更後に未実行だった標準回帰9群をビルド済みfixtureで追加実行して成功した。例外ログは拒否/復旧の意図的なfixtureで、終了コード0と全PASSを確認。実利用の壁紙/設定は操作していない。
+- originをfetchし、開始時mainとorigin/mainが`f7c8c84`で一致することを確認。対象10ファイルの差分レビューで阻害指摘なし。今回の追記は検証文書だけで、製品変更・版更新・再発行は不要。
+- 再利用判定、追加回帰、stage/commit tree、通常push後のリモート照合を`.artifacts/commit-validation-settings-navigation-20261105/`へ記録する。新しい実行物コピーはなく、標準回帰の専用一時フォルダーは試験終了時に削除済み。既存の検証証跡は保持。GitHub Release・実利用先への配置は含めない。
+
+## 2026-11-05 設定ボタンと共通設定コマンドの経路統一（0.13.3）
+
+- mainは開始時clean、`pull --ff-only`で`f7c8c8469140a6c23c85c19a7a6a507d514fbc61`の最新状態を確認。本体もclean/latestのmainから対応した。
+- 既存のhomeコマンドIDを保ち、`Ui.OpenSettingsAsync`への取り次ぎに集約。設定移動前のView破棄・snapshot消去・再公開を取り除き、パレットの設定コマンドと同じ経路で移動する。非表示時は既存JSが一覧/画像/Blob URL/世代保持を解放し、再表示時に読み直す。旧パス区間の回収は.NETの次の履歴公開時に行う。独立Windowはパレット実行時と同様に表示を維持する。
+- 修正前の発行AppDock 0.147.1と旧native fixtureでは、新しい検査が「戻る1回で壁紙履歴へ戻る」で失敗し、報告された不具合を再現。初回ログと隔離profile`history-page-ui-settings-navigation-1793805480015`を保持した。修正後の開発GUI2群は成功（`history-page-ui-settings-navigation-1793805678861`）。
+- Release solution buildは初回に共有Runtime参照DLLのCS0009/CS0234で失敗。ログを保持し、`dotnet build Applet.WallpaperSlideshow.at365.slnx -c Release -m:1`で直列再実行して警告/エラー0で成功した。履歴JSモジュール14件も成功。
+- 発行前レビューで、共通設定コマンドへの集約、既存ID、画像/世代保持の解放、設定保存不変、停止時View破棄を確認し、阻害指摘なし。設定・保存形式・公開API・最低本体0.140.0の変更がないため0.13.2から0.13.3へパッチ更新した。
+- `publish.bat`終了0。発行本体0.147.2と発行Web資産を使うGUI18群が成功（`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793805805497`）。実ボタンと実パレットからの設定移動、各1回の戻る/進む、View保持、非表示時の画像/Blob URL/世代保持の解放、設定不変、従来のプレビュー/選択/明暗/独立Window/MCP/停止回収を確認した。
+- 自動更新専用GUI6群も成功（`history-page-ui-refresh-mode-1793805847008`）。OFF時の固定履歴、明示更新、ON/OFF切替、設定から再表示した際の最新履歴、ホスト/プロセス再起動後の保存値を確認。RPC fixture6群はhomeが自己設定APIだけへ取り次ぐことを含め成功し、発行EXEの起動/不正設定拒否/共通ログ/限定HWNDのquery-cancel-end/正常終了も成功した。
+- `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`のEXE/manifest/feedの0.13.3、最低本体0.140.0、ソースWeb資産と発行物、ZIP全11ファイルが一致。ZIP SHA256=`56f0314e4f6da1fcbcf8e2b615ba43a64d9b74add7ad10ab56c7f6cbd154e97f`、46,338,078 bytes。
+- 証跡は`.artifacts/settings-navigation-20261105/`。Applet67入力と本体1,059入力、完全ログ/終了コード、レビュー、配布物と実行物のSHA256、最終入力一致を記録。実行環境は固定Node 26.13.0/pnpm12.15.0、.NET SDK10.0.403、Windows10.0.26300。背面描画/監視の全native回帰は今回の変更対象外のため追加実行していない。
+- 今回4profileのプロセス終了・実パス・再解析ポイントを確認し、専用EXE/DLL等56ファイル（3,180,308 bytes）を削除。383ファイルの結果/画像/設定等はハッシュ一致で保持。発行Web資産GUIの成功最新3件を残し、旧成功`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793800752943`を1件整理。失敗証跡と共用本体/固定build出力は保持した。
+- 実利用の壁紙・画像・設定、実Explorer/実NAS/実ごみ箱/関連付けアプリは操作していない。ユーザー環境での実利用確認、commit・push・GitHub Release・実利用先への配置は未実施。
+
 ## 2026-11-05 プレビュー移動・選択・スクロール追従のコミット前照合
 
 - 利用者から0.13.2のスクロールを含む実利用の確認と、ここまでのコミット/プッシュ依頼を受領。`origin`をfetchし、開始時のmainとorigin/mainが`6eea479`で一致することを確認した。

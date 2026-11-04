@@ -59,7 +59,6 @@ const fixture = path.join(
         settingsOpened = true;
         return null;
       }
-      if (method === "host.pages.dispose") return null;
       if (method === "host.storage.set") {
         assert.equal(
           params.scope,
@@ -110,7 +109,8 @@ const fixture = path.join(
     assert.deepEqual(
       panel.actions.slice(0, 3).map((action) => action.command),
       ["on", "off", "toggle"].map(
-        (value) => "at365.wallpaper-slideshow.settings.slideshowEnabled." + value,
+        (value) =>
+          "at365.wallpaper-slideshow.settings.slideshowEnabled." + value,
       ),
     );
     assert.equal(
@@ -218,8 +218,14 @@ const fixture = path.join(
       liveKeys,
       "old metadata generations are reclaimed",
     );
+    const homeStart = calls.length;
     await command("home");
     assert(settingsOpened);
+    assert.deepEqual(
+      calls.slice(homeStart),
+      ["host.ui.openSettings"],
+      "settings navigation must not dispose the current page or clear its snapshot first",
+    );
     await peer.request("deactivate");
     stopped = true;
     child.stdin.end();
