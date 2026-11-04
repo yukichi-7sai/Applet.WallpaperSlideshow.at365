@@ -26,11 +26,18 @@ let panel, diagnostics = '', events = 0;
 child.stderr.on('data', data => { diagnostics += data; });
 const themes = path.join(process.env.APPDATA, 'Microsoft/Windows/Themes');
 const watcher = fs.existsSync(themes) ? fs.watch(themes, (_, file) => { if (String(file).startsWith('TranscodedWallpaper')) events++; }) : null;
-const logs = [], checks = [], resourceSamples = [];
+const logs = [], checks = [], resourceSamples = [], memory = new Map();
 const peer = new JsonLinePeer(child.stdout, child.stdin, async (method, params) => {
   if (method === 'host.ui.imageDirectory') return path.join(output, 'panel-images');
   if (method === 'host.ui.panel') { panel = params; return null; }
   if (method === 'host.log') { logs.push(params); return null; }
+  if (method === 'host.storage.get' || method === 'host.storage.set') {
+    assert.equal(params.scope, 'memory');
+    if (method === 'host.storage.get') return memory.get(params.key) ?? null;
+    if (params.value == null) memory.delete(params.key);
+    else memory.set(params.key, params.value);
+    return null;
+  }
   throw Error('Unexpected host API: ' + method);
 });
 const exited = new Promise((resolve, reject) => { child.on('exit', resolve); child.on('error', reject); });
@@ -52,6 +59,9 @@ async function until(fn, label) {
       assert(pixels.R > 240 && pixels.G < 10 && pixels.B < 10, 'Desktop surface did not render the fixture pixels');
     }
     checks.push('fixed native EXE / real Explorer surfaces / visible state');
+    const initialRevision = memory.get('history')?.revision ?? -1;
+    await until(() => (memory.get('history')?.revision ?? -1) > initialRevision, 'automatic wallpaper update');
+    checks.push('automatic wallpaper update advances memory history');
     for (let i = 0; i < 8; i++) {
       await peer.request('command.execute', { id: 'at365.wallpaper-slideshow.next' });
       await new Promise(r => setTimeout(r, 350));

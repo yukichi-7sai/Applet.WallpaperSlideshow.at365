@@ -53,6 +53,7 @@ namespace at365.WallpaperSlideshow
                 _uiTimer.Tick += (_, _) =>
                 {
                     if (_pauseState.IsPaused) return;
+                    RefreshWatchers();
                     if (Interlocked.Exchange(ref _requiredInitialize, 0) != 0)
                     {
                         InitializeApplication(true);
@@ -71,7 +72,6 @@ namespace at365.WallpaperSlideshow
             _maintenanceTimer.Tick += (_, _) =>
             {
                 if (_disposed) return;
-                RefreshWatchers();
                 WallpaperController.Instance.CheckDesktop();
             };
             _maintenanceTimer.Start();
@@ -98,6 +98,7 @@ namespace at365.WallpaperSlideshow
         public void Next()
         {
             if (_disposed || _pauseState.IsPaused) return;
+            RefreshWatchers();
             if (Interlocked.Exchange(ref _requiredInitialize, 0) != 0) InitializeApplication(true);
             else WallpaperController.Instance.Next();
         }
@@ -156,6 +157,7 @@ namespace at365.WallpaperSlideshow
             _paused = target;
             if (!target)
             {
+                RefreshWatchers();
                 InitializeApplication(true);
                 _uiTimer?.Start();
             }
