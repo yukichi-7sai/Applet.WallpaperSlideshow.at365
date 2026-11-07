@@ -1,5 +1,14 @@
 # 検証記録
 
+## 2026-11-07 設定画面のSection整理（0.15.0）
+
+- `history` Sectionの見出しを「最近使った壁紙」へ変更し、`windows`とともに折りたたみを除去した。共通`settingSections[].pages: ["history"]`で表示方法を先頭へ配置し、独立した「ページの表示」Sectionを不要にした。Section/ページ/設定/コマンドのID、既定値、共有/端末別保存、MCP公開は保持。
+- Commands/Settings/Pages/Ui.OpenSettingsAsync/Log、Memory Storage、ローカルページのsourceImages契約を現行SDK/Runtime 0.34.0と照合。廃止API呼出しは残っていなかった。開発/利用文書の旧パネル・サムネイルファイル・ログタブの説明を現行仕様へ更新。新しいmanifest契約の最低ホスト版0.183.0に合わせminor更新し、発行前レビューで阻害事項なし。
+- 標準native回帰9群、RPC fixture6群と発行EXEの接続・不正設定の実デスクトップ接続前の拒否・共通ログ・自身のHWNDへのquery/cancel/end・EOF終了が成功。最終固定本体0.183.2で設定GUI11群と、履歴の設定ボタン/パレットからの移動・戻る/進む各1回が成功。表示方法の保存と再表示、共有設定の不変、明暗1280/700幅、既存モニター一覧編集・取消・競合を確認。ページだけのSectionのfixtureでは重複なし、未配置ページの共通Sectionへの残留も確認した。
+- 初回GUIは既定のpage指定が省略保存される契約に検査を修正。700幅のWindows背景ボタンのはみ出しは本体共通部品で修正し、旧EXEで失敗・最終EXEで成功を確認した。狭幅の長いSection全体の撮影はviewportを変えてしまうため、見出し/表示方法を個別に撮影。失敗ログと画像を保持した。
+- publish.batは終了0。`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`のmanifest/EXE/feedは0.15.0、最低ホスト0.183.0、ZIP11ファイルと発行先、元web資産9件のSHA256が一致。EXE SHA256 `d1413b6a7e98c5023b951d522c49d67d7d6bad4680b6754b13762e6a5b689513`、update.zipは203,362 bytes / `bd8d62f3778abd229403191cd9ece3a4c2231c85494d67f37eb71f7828b4956f`。
+- 正本は`.artifacts/settings-sections-20261107/`のinputs-final、各ログ、packages-final（Applet0.15.0）/host-package-1832、cleanup。最終GUIは`monitor-list-ui-1794059552485`と`history-page-ui-settings-navigation-1794059598041`。本体126件等は`../AppDock.at365/.artifacts/wallpaper-settings-20261107/`。終了確認後に今回の専用実行物24件をhash記録して回収し、共用runtime・全記録・画像を保持。既存フォルダーは状態/所有が不明、今回の成功も方法ごと3回未満なので全体削除なし。実ユーザーの壁紙/画像やWindows背景設定は変更していない。mainで本体対応と別のローカルコミットにまとめ、push・Release・実利用先配置は行わない。
+
 ## 2026-11-07 共有Desktop Runtimeへ変更（0.14.1）
 
 - cleanなmainから`pull --ff-only`で最新を確認。publish.ps1の`--self-contained true`をfalseへ変更し、既存プロジェクト指定と一致させた。自己完結時専用の単一EXE圧縮を除去し、本体の共通`Directory.Build.targets`でSelfContained/PublishSelfContained/PublishAotのtrue指定を3件とも拒否した。

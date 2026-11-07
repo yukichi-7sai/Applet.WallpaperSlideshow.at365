@@ -23,6 +23,19 @@ const legacy = JSON.stringify([
   { Folder: 'C:/Example/C', Mode: 1, PaddingBottom: 5 },
 ]);
 settings.extensions[owner] = { enabled: false, settings: { monitors: legacy, intervalSeconds: 60, tileMargin: 300 } };
+const fixtureId = 'fixture.page-sections';
+const fixtureRoot = path.join(profile, 'extensions', fixtureId);
+fs.mkdirSync(fixtureRoot, { recursive: true });
+fs.writeFileSync(path.join(fixtureRoot, 'index.cjs'), 'exports.activate = async () => {};');
+fs.writeFileSync(path.join(fixtureRoot, 'page.html'), '<!doctype html><title>Fixture</title>');
+fs.writeFileSync(path.join(fixtureRoot, 'extension.json'), JSON.stringify({
+  apiVersion: 1, id: fixtureId, name: 'Page sections fixture', version: '1.0.0',
+  minimumHostVersion: '0.183.0', runtime: 'node', entry: 'index.cjs', capabilities: ['pages'],
+  commands: [{ id: fixtureId + '.open', title: 'Open', activateOnExecute: true }],
+  pages: ['placed', 'unassigned'].map(id => ({ id, title: id, source: 'local', ui: 'page.html', openCommand: fixtureId + '.open' })),
+  settingSections: [{ id: 'pages', title: 'ページ配置の試験', pages: ['placed'] }],
+}));
+settings.extensions[fixtureId] = { enabled: false, settings: {} };
 const settingsFile = require(path.join(hostRoot, 'scripts/test-settings.cjs')).file(profile);
 fs.writeFileSync(settingsFile, JSON.stringify(settings));
 const executable = process.argv[2] ? prepareTestHost(path.resolve(process.argv[2]), profile, path.join(root, '.artifacts')) : require(path.join(hostRoot, 'node_modules/electron'));
@@ -60,9 +73,34 @@ const edit = number => page.getByRole('button', { name: `モニター${number}�
     host.context().on('page', p => p.on('pageerror', error => errors.push(error.message)));
     await host.evaluate(() => window.dock.executeCommand('appdock.settings.open'));
     page = await settingsPage(host);
+    await page.getByTestId('settings-nav:applet:' + fixtureId).click();
+    const placed = page.getByRole('region', { name: 'ページ配置の試験', exact: true });
+    const unassigned = page.getByRole('region', { name: 'ページの表示', exact: true });
+    assert.equal(await placed.getByLabel('placedの表示方法', { exact: true }).count(), 1);
+    assert.equal(await unassigned.getByLabel('unassignedの表示方法', { exact: true }).count(), 1);
+    assert.equal(await page.getByLabel('placedの表示方法', { exact: true }).count(), 1);
+    checks.push('page-only section renders once; unassigned page display remains in the common section');
     await page.getByTestId('settings-nav:applet:' + owner).click();
     const table = () => page.getByRole('table', { name: 'モニターごとの画像設定', exact: true });
     await table().waitFor();
+    const historySection = page.getByRole('region', { name: '最近使った壁紙', exact: true });
+    const windowsSection = page.getByRole('region', { name: 'Windowsの背景', exact: true });
+    const display = page.getByLabel('最近使った壁紙の表示方法', { exact: true });
+    assert.equal(await historySection.count(), 1);
+    assert.equal(await windowsSection.count(), 1);
+    assert.equal(await page.getByRole('heading', { name: 'ページの表示', exact: true }).count(), 0);
+    assert.equal(await historySection.locator('select').first().getAttribute('aria-label'), '最近使った壁紙の表示方法');
+    await windowsSection.getByRole('button', { name: 'Windowsの背景設定を開く', exact: true }).waitFor();
+    const beforeDisplayChange = await own();
+    await display.selectOption('window');
+    await until(() => host.evaluate(owner => window.dock.snapshot().then(s => s.settings.value.extensions[owner].pages?.history?.display === 'window'), owner), 'history display saved');
+    assert.deepEqual(await own(), beforeDisplayChange);
+    await page.getByTestId('settings-nav:about').click();
+    await page.getByTestId('settings-nav:applet:' + owner).click();
+    assert.equal(await display.inputValue(), 'window');
+    await display.selectOption('page');
+    await until(() => host.evaluate(owner => window.dock.snapshot().then(s => (s.settings.value.extensions[owner].pages?.history?.display ?? 'page') === 'page'), owner), 'history page display restored');
+    checks.push('history and Windows sections stay expanded; history display saves in its own section without changing Applet settings');
     assert.equal(await table().locator('tbody tr').count(), 2);
     assert.equal(await table().locator('input,select,textarea').count(), 0);
     assert.match(await table().innerText(), /Tile（複数画像を並べる）/);
@@ -179,6 +217,17 @@ const edit = number => page.getByRole('button', { name: `モニター${number}�
       for (const width of [1280, 700]) {
         await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: 840, deviceScaleFactor: 1, mobile: false });
         await table().screenshot({ path: path.join(profile, `list-${theme}-${width}.png`) });
+        if (width >= 1000) await historySection.screenshot({ path: path.join(profile, `history-${theme}-${width}.png`) });
+        else {
+          await historySection.locator('header').screenshot({ path: path.join(profile, `history-heading-${theme}-${width}.png`) });
+          await display.locator('..').screenshot({ path: path.join(profile, `history-display-${theme}-${width}.png`) });
+        }
+        assert(await windowsSection.getByRole('button', { name: 'Windowsの背景設定を開く', exact: true }).evaluate(button => {
+          const bounds = button.getBoundingClientRect();
+          const section = button.closest('section').getBoundingClientRect();
+          return bounds.left >= section.left && bounds.right <= section.right && button.scrollWidth <= button.clientWidth;
+        }), 'Windows background action must fit within its section and keep its label readable');
+        await windowsSection.screenshot({ path: path.join(profile, `windows-${theme}-${width}.png`) });
         await edit(1);
         const focused = dialog().getByLabel('タイル枚数', { exact: true });
         await focused.focus();

@@ -5,8 +5,8 @@
   "displayName": "WallpaperSlideshow",
   "icon": "image",
   "tagline": "お気に入りの景色を、デスクトップに。",
-  "version": "0.14.1",
-  "minimumHostVersion": "0.180.0",
+  "version": "0.15.0",
+  "minimumHostVersion": "0.183.0",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",
   "runtime": "native",
@@ -250,24 +250,23 @@
     },
     {
       "id": "history",
-      "title": "履歴の表示",
+      "title": "最近使った壁紙",
       "description": "残す履歴の件数と、最近使った壁紙の見た目を調整します。",
+      "pages": ["history"],
       "settings": [
         "historyLimit",
         "historyPageSize",
         "thumbnailWidth",
         "thumbnailHeight",
         "maxFileNameLength"
-      ],
-      "collapsible": true
+      ]
     },
     {
       "id": "windows",
       "title": "Windowsの背景",
       "description": "停止中に見えるWindows側の背景を確認できます。",
       "settings": [],
-      "actions": ["at365.wallpaper-slideshow.background-settings"],
-      "collapsible": true
+      "actions": ["at365.wallpaper-slideshow.background-settings"]
     }
   ]
 }

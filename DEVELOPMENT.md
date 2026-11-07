@@ -39,7 +39,7 @@ EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・
 
 発行後の履歴GUIには`--published-assets --long-cache`を付け、発行先のweb一式を隔離したnative fixtureへコピーして検証します。カードサイズの独立保存、View再生成とApplet再起動での復元、共有設定の不変、画像キャッシュファイルが作られないこと、閉じたときのBlob URL解放、元画像の移動・読取失敗を確認します。`--settings-navigation-only`は設定ボタンと実パレットからの共通設定コマンド実行、戻る/進む各1回、View保持、非表示時の画像と世代保持の解放、設定の不変を確認します。同じ検査を通常GUIにも含めます。`scripts/test-history-modules.cjs`は保存失敗・明示再試行・不正幅・破損／未知版の非上書きと、閉じた後の遅延decodeの解放を検査します。
 
-表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidth、任意のautoRefreshを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使います。現行の連携契約に合わせ、最低ホスト版は0.180.0です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
+表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidth、任意のautoRefreshを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使います。現行の連携契約に合わせ、最低ホスト版は0.183.0です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
 
 履歴GUIの`--refresh-mode-only`は、自動更新OFFの表示維持とページ送り、更新ボタン、ONへの即時切替と後続更新、OFFでの再固定、View/ホスト再起動後の端末別保存を確認します。通常の履歴GUIは明示的にONへ切り替えた後に従来の操作を確認します。保持中の旧区間はprivateなメモリStorageで共有し、元画像の取得・画像解放・権限は共通APIを使います。
 
@@ -57,7 +57,7 @@ DesktopHostは従来のWorkerW構成とProgman配下の背景構成を検出し�
 
 、各Surface専用の`BufferedGraphicsContext`で表示サイズの画像を完成させ、`Render`でDCへまとめて転送します。互換Bitmapは再利用し、描画ごとのpaint DCは保持せず、Surface終了時にバッファも解放します。`WM_PRINTCLIENT`も同じ描画経路を使います。`SetWindowPos`による表示・配置は初回だけとし、通常の画像交換では再配置せず、再描画を要求します。ちらつきの改善は実環境での目視確認を必要とします。
 
-接続先の破棄とTaskbarCreatedで表示先を取り直し、最大5回の間隔付き再接続を行います。停止中の遅延結果は表示しません。接続失敗は既存パネルとホストログへ表示し、「次の壁紙」で明示的に再試行できます。Windows背景設定への退避は行いません。旧prepare-backgroundコマンドは削除し、background-settingsは停止中に見えるWindows背景を確認する入口として維持します。
+接続先の破棄とTaskbarCreatedで表示先を取り直し、最大5回の間隔付き再接続を行います。停止中の遅延結果は表示しません。接続失敗はホストログへ記録し、「次の壁紙」で明示的に再試行できます。Windows背景設定への退避は行いません。旧prepare-backgroundコマンドは削除し、background-settingsは停止中に見えるWindows背景を確認する入口として維持します。
 
 通常回帰はfakeを使用します。`--inspect-desktop`は構成の読み取りだけ、`--desktop-smoke`は約1秒の実背面配置を行う明示的な試験です。`scripts/test-memory-native.cjs [EXE]`はEXEの固定コピーで実表示、切り替え、自身の表示HWNDを閉じた後の復旧、停止・再開、限定HWNDへの終了通知、Themesキャッシュの変更通知を確認します。利用者のExplorer本体・ロック・RDP・入力設定は操作しません。これらの成功と、実操作による互換性確認は区別します。
 
@@ -67,7 +67,7 @@ DesktopHostは従来のWorkerW構成とProgman配下の背景構成を検出し�
 
 画像の走査・合成は直列に実行し、更新を重ねず、キャンセル済みの結果を適用しません。設定が同じなら描画をやり直しません。フォルダー監視の補助確認（存在確認・失敗した監視の再接続）は、自動更新・手動の「次の壁紙」・停止からの再開時に行い、起動時・設定変更時の確認も維持します。通常のFileSystemWatcher通知を残し、補助確認は既存のバックグラウンド処理で重複実行を防ぎます。確認完了を壁紙更新の前提にはせず、確認で変更が判明した場合は従来どおり更新時の再初期化へ反映します。デスクトップ表示の健全性確認だけは引き続き5秒間隔です。抽選のシャッフルは線形時間。タイル画像は1枚ずつ読み込み・縮小・解放し、全タイルの原寸画像を同時に保持しません。
 
-履歴画像は選択したモニターの表示ページだけ順次生成します。指定サイズのPNGをローカルファイルとして読み込み、通信量による画質・解像度の縮小は行いません。ページ変更・操作画面へ戻る・終了時にサムネイルを削除します。ブラウザー側でも画面外の画像を遅延読み込みします。専用トレイアイコン・トレイ項目・独自の履歴ウィンドウは作りません。表示先はホストのページ基盤へ委ねます。
+履歴画像は選択したモニターの表示ページだけ、共通の元画像APIから指定サイズで取得します。ブラウザー側で遅延読み込みし、表示中だけBlob URLを保持します。サムネイルのファイル保存は行いません。専用トレイアイコン・トレイ項目・独自の履歴ウィンドウは作りません。表示先はホストのページ基盤へ委ねます。
 
 履歴はパス一覧とページ位置をメモリStorageへ置き、表示中のJSページだけがサムネイルのBlob URLを保持します。履歴JSON・サムネイルファイルは保存しません。描画の実測と検証範囲は[VERIFICATION.md](VERIFICATION.md)を参照してください。
 
@@ -93,7 +93,7 @@ AppDock 0.26.29以降のmanifest `commands[].automation`で公開対象を宣言
 
 ## 設定コマンド
 
-公開設定はmanifestのslideshowEnabled/intervalSecondsで宣言し、slideshowEnabledのon/off/toggleは本体生成を使います。ONで再生、OFFで停止、既定はONです。旧start/stop/toggleとresume alias、独自PauseAsyncを削除。設定画面と公開操作は生成IDを参照します。画像設定の検証より先にsettings.changedのslideshowEnabledを反転してエンジンの手動停止へ反映し、不正な画像設定があっても停止・再開を維持します。最低本体版0.180.0、公開/生成/競合/ログは[共通仕様](../AppDock.at365/docs/automation.md#設定宣言と自動生成コマンド)を参照。RPC試験は更新通知の保存値を実プロセスへ送り、生成コマンドの実行はホストGUIで検証します。
+公開設定はmanifestのslideshowEnabled/intervalSecondsで宣言し、slideshowEnabledのon/off/toggleは本体生成を使います。ONで再生、OFFで停止、既定はONです。旧start/stop/toggleとresume alias、独自PauseAsyncを削除。設定画面と公開操作は生成IDを参照します。画像設定の検証より先にsettings.changedのslideshowEnabledを反転してエンジンの手動停止へ反映し、不正な画像設定があっても停止・再開を維持します。最低本体版0.183.0、公開/生成/競合/ログは[共通仕様](../AppDock.at365/docs/automation.md#設定宣言と自動生成コマンド)を参照。RPC試験は更新通知の保存値を実プロセスへ送り、生成コマンドの実行はホストGUIで検証します。
 
 ## 公開設定
 
@@ -103,7 +103,7 @@ GUI試験にscripts/settings-mcp-check.cjsによる隔離MCP確認を含みま�
 
 ## 設定画面の構成
 
-`extension.json`の`settingSections`で用途別のカードを宣言します。描画・余白・入力・検索・保存は[本体の共通テンプレート](../AppDock.at365/docs/extensions.md#共通の設定ページ)へ委譲し、Applet固有の設定フォームやCSSを複製しません。`TileMargin`は各モニターに保持し既定10px、`TileCount`とともに`enabledWhen`でMode=Tile時だけ編集できます。共通の余白値は使用しません。`monitors.list`で番号付きの共通一覧と追加・編集・削除・並べ替えダイアログを使います。番号は配列順から表示し、保存データへIDや名前を追加しません。設定画面への直接移動は既存のホストAPIを使います。再生ON/OFFの説明は共通コマンドリンクを使い、Windows背景設定ボタンはfilledの共通面を宣言します。
+`extension.json`の`settingSections`で用途別のカードを宣言します。「最近使った壁紙」と「Windowsの背景」は常時展開し、`history.pages: ["history"]`で履歴ページの表示方法を「最近使った壁紙」の先頭へ配置します。描画・余白・入力・検索・保存は[本体の共通テンプレート](../AppDock.at365/docs/extensions.md#共通の設定ページ)へ委譲し、Applet固有の設定フォームやCSSを複製しません。`TileMargin`は各モニターに保持し既定10px、`TileCount`とともに`enabledWhen`でMode=Tile時だけ編集できます。共通の余白値は使用しません。`monitors.list`で番号付きの共通一覧と追加・編集・削除・並べ替えダイアログを使います。番号は配列順から表示し、保存データへIDや名前を追加しません。設定画面への直接移動は既存のホストAPIを使います。再生ON/OFFの説明は共通コマンドリンクを使い、Windows背景設定ボタンはfilledの共通面を宣言します。
 
 `scripts/test-monitor-list-ui.cjs`は実Appletを無効状態のまま隔離したホストで設定を編集し、旧JSON/Folder/数値Mode、フォルダー選択、登録単位の保存・取消・競合、並べ替え、テーマと狭幅を検証します。ホストのローカルNodeで実行し、発行ホストEXEを第1引数に渡すと固定コピーと発行Applet一式を使用します。壁紙は変更しません。
 
@@ -117,4 +117,4 @@ GUI試験のAppDockは[共通実行場所](../AppDock.at365/docs/testing.md#固�
 
 ## 現行の連携契約
 
-本体0.180.0以上とSDK/Runtime 0.34.0を基準にする。旧パネルへの状態送信は行わず、画面・設定・コマンド・ログは各機能の現行APIへ接続する。コマンドID・設定キー・保存値を保持する。旧パネルを前提としたテストは、実画面・公開コマンド・保存・停止の検証へ置き換える。
+本体0.183.0以上とSDK/Runtime 0.34.0を基準にする。旧パネルへの状態送信は行わず、画面・設定・コマンド・ログは各機能の現行APIへ接続する。コマンドID・設定キー・保存値を保持する。旧パネルを前提としたテストは、実画面・公開コマンド・保存・停止の検証へ置き換える。
