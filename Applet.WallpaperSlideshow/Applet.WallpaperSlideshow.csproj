@@ -11,12 +11,11 @@
     <StartupObject>Applets.WallpaperSlideshow.Program</StartupObject>
     <ApplicationIcon>resources/icon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.14.0</Version>
+    <Version>0.14.1</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
   <ItemGroup>
@@ -24,4 +23,5 @@
     <ProjectReference Include="../../AppDock.at365/dotnet/AppDock.Runtime/AppDock.Runtime.csproj" />
     <InternalsVisibleTo Include="Applet.WallpaperSlideshow.RegressionTests" />
   </ItemGroup>
+  <Import Project="../../AppDock.at365/dotnet/Directory.Build.targets" />
 </Project>

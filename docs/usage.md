@@ -14,7 +14,7 @@
 
 利用するPCにはAppDockの動作環境が必要です。詳細は[AppDockの導入案内](../../AppDock.at365/docs/usage.md)を参照してください。
 
-このAppletの配布EXEには必要なランタイムが含まれています。元のWallpaperSlideshowと同時に再生しないでください。
+このAppletはPCにインストールされた **.NET 10 Desktop Runtime（Windows x64）** を使用し、ランタイムを同梱しません。本体と同じ共有ランタイムを使用します。通常の.NET RuntimeだけではWinFormsを実行できません。元のWallpaperSlideshowと同時に再生しないでください。
 
 ## 設定
 

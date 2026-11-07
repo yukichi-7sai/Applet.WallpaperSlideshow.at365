@@ -1,5 +1,15 @@
 # 検証記録
 
+## 2026-11-07 共有Desktop Runtimeへ変更（0.14.1）
+
+- cleanなmainから`pull --ff-only`で最新を確認。publish.ps1の`--self-contained true`をfalseへ変更し、既存プロジェクト指定と一致させた。自己完結時専用の単一EXE圧縮を除去し、本体の共通`Directory.Build.targets`でSelfContained/PublishSelfContained/PublishAotのtrue指定を3件とも拒否した。
+- WinForms・描画・Web資産・設定・保存・公開API・最低本体0.180.0を維持した。既に本体が要求するDesktop Runtimeを共有する配布方法の変更として0.14.0→0.14.1へパッチ更新。開発文書と動作環境へ環境のランタイムを使う方針を記載し、共通文書へ接続した。発行前レビューは圧縮設定と試験トレース上書きへの対応後、阻害事項なし。
+- Release solution buildは警告/エラー0、標準native回帰9群成功。fixtureのRPC6群と、発行EXEの接続・実デスクトップへのアクセス前の不正設定拒否・共通エラーログ・自身のHWNDへのquery/cancel/end・正常終了が成功した。履歴Web資産とページ処理は未変更のため履歴GUI全回帰は追加実行していない。
+- `publish.bat`成功。埋め込みruntimeconfigはMicrosoft.NETCore.App/WindowsDesktop.App 10.0.0の共有framework参照で、includedFrameworksとランタイムDLLの同梱なし。実起動のhost traceでPC側の共有ランタイム使用、EOF終了0を確認し、空のDOTNET_ROOT_X64では2147516547で失敗することを確認した。PCのランタイム導入状態は変更していない。
+- `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ0.14.1を発行。EXEは51,756,931→410,266 bytes、SHA256=`5bf9e54314506efa4c49ea7bbcf90c7fc8d2843a66b8c8cbd39b339ab2240d61`。update.zipは46,336,192→203,353 bytes、SHA256=`3500c8bdc59897948efc10950f8db74e58200c1fe02c9ee3b1fdee22dcd07306`。ZIP全11ファイル・manifest/feed・EXEの版/サイズ/ハッシュ、発行Web資産とソースの一致を確認した。
+- 完全ログ・runtimeconfig・bundle一覧・host traceは`.artifacts/shared-runtime-20261107/`。入力ハッシュ・発行前レビュー・配布照合は`../AppDock.at365/.artifacts/shared-runtime-20261107/`。今回の成功をコミット判定へ再利用し、stage/commit treeは各repoの`.artifacts/commit-validation-shared-runtime-20261107/`へ記録する。追加の専用実行物コピーなし、空のランタイム検査用rootは回収済み、過去の証跡を保持した。
+- 実Explorerへの表示・実壁紙/画像・ロック/RDP/実OS終了・長期再生は今回の確認対象外。push・Release・実利用先配置は行わない。
+
 ## 2026-11-07 現行ページ契約への統一（0.14.0）
 
 - 旧パネル構築・送信と専用状態を除去し、履歴ページ、Memory Storage、設定画面への移動、共通ログ、画像選択/切替の処理を維持した。設定への移動に必要なui capabilityは保持した。

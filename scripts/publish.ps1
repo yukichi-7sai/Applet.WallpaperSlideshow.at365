@@ -7,7 +7,7 @@ $taskPublishDirectory = if ($OutputDirectory) { [System.IO.Path]::GetFullPath($O
 $taskManifest = Get-Content -LiteralPath (Join-Path $taskAppletRoot 'extension.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $taskProject = [xml](Get-Content -LiteralPath (Join-Path $taskAppletRoot 'Applet.WallpaperSlideshow\Applet.WallpaperSlideshow.csproj') -Raw)
 if ($taskManifest.version -ne $taskProject.Project.PropertyGroup.Version) { throw 'EXEとmanifestのバージョンが一致しません。' }
-dotnet publish (Join-Path $taskAppletRoot 'Applet.WallpaperSlideshow\Applet.WallpaperSlideshow.csproj') -c Release -r win-x64 --self-contained true -o $taskPublishDirectory
+dotnet publish (Join-Path $taskAppletRoot 'Applet.WallpaperSlideshow\Applet.WallpaperSlideshow.csproj') -c Release -r win-x64 --self-contained false -o $taskPublishDirectory
 if ($LASTEXITCODE -ne 0) { throw "Wallpaper Applet publish failed ($LASTEXITCODE)" }
 # Retire only the three previously packaged gallery assets; retain all user data.
 $taskWebRoot = [IO.Path]::GetFullPath((Join-Path $taskPublishDirectory 'web'))

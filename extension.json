@@ -5,7 +5,7 @@
   "displayName": "WallpaperSlideshow",
   "icon": "image",
   "tagline": "お気に入りの景色を、デスクトップに。",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "minimumHostVersion": "0.180.0",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",

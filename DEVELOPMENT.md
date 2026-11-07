@@ -27,7 +27,9 @@ dotnet run --project Applet.WallpaperSlideshow.RegressionTests -c Release
 .\publish.bat
 ```
 
-発行EXEはwin-x64・自己完結型です。AppDockを完全終了し、発行フォルダー一式をEXE隣の`extensions/Applet.WallpaperSlideshow.at365`へコピーします。AppDockを起動し直すと認識します。
+発行EXEはwin-x64・framework-dependent単一EXEです。PCにインストールされた.NET 10 Desktop Runtime（Windows x64）を使用します。AppDockを完全終了し、発行フォルダー一式をEXE隣の`extensions/Applet.WallpaperSlideshow.at365`へコピーします。AppDockを起動し直すと認識します。
+
+.NETランタイムを同梱しない方針と発行検証は[共通発行手順](../AppDock.at365/docs/publishing.md#netランタイムの共通方針)に従います。プロジェクトから共通の`dotnet/Directory.Build.targets`をimportし、発行時の自己完結指定を拒否します。
 
 `scripts/test-protocol.cjs` / `scripts/test-ui.cjs`はテスト専用エンジンと一時画像を使用し、ユーザーの壁紙・画像フォルダーを変更しません。
 
