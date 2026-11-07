@@ -3,7 +3,6 @@ using System.Text.Json;
 using AppDock.SDK;
 using at365.WallpaperSlideshow;
 using Microsoft.Win32;
-using DockPanel = AppDock.SDK.Panel;
 
 namespace Applets.WallpaperSlideshow;
 
@@ -12,7 +11,6 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
     private IExtensionContext? context;
     private AppLog.HostSession? logging;
     private IDisposable? subscription;
-    private Config? config;
     private string? fingerprint;
     private HistoryPublisher? history;
     private bool started;
@@ -40,11 +38,10 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
             options.Validate(StableScreensProvider.Screens.Select(s => s.Bounds));
             started = true;
             engine.Start(options, !services.Settings.Get("slideshowEnabled", true));
-            config = options;
             fingerprint = SlideshowOptions.Fingerprint(options);
         }, token);
         Register(services.ExtensionId + ".next", "次の壁紙に更新", async ct => {
-            await dispatcher.InvokeAsync(engine.Next, ct); await PublishAsync(ct); await history.PublishAsync(ct);
+            await dispatcher.InvokeAsync(engine.Next, ct); await history.PublishAsync(ct);
         });
         Register(services.ExtensionId + ".background-settings", "Windowsの背景設定を開く",
             ct => dispatcher.InvokeAsync(engine.OpenWindowsBackgroundSettings, ct));
@@ -62,7 +59,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
         });
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
         ApplicationController.Instance.StateChanged += StateChanged;
-        await PublishAsync(token);
+
         await history.PublishAsync(token);
     }
     private async Task ApplyAsync(CancellationToken token)
@@ -75,35 +72,14 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
             await dispatcher.InvokeAsync(() => {
                 options.Validate(StableScreensProvider.Screens.Select(s => s.Bounds));
                 var nextFingerprint = SlideshowOptions.Fingerprint(options);
-                if (nextFingerprint != fingerprint) { engine.Configure(options); fingerprint = nextFingerprint; config = options; }
+                if (nextFingerprint != fingerprint) { engine.Configure(options); fingerprint = nextFingerprint; }
             }, token);
-            await PublishAsync(token);
+
             if (history is not null) await history.PublishAsync(token);
         } catch (Exception error) when (error is not OperationCanceledException) {
             AppLog.Error("AppDock設定の反映", error);
-            await PublishAsync(token, error.Message);
+
         }
-    }
-    private async Task PublishAsync(CancellationToken token, string? error = null)
-    {
-        var services = context;
-        if (services is null) return;
-        var panel = await dispatcher.InvokeAsync(() => new DockPanel("壁紙スライドショー",
-            error is null ? "モニターごとの画像フォルダーから、重複なしで壁紙を切り替えます。" : "設定エラー: " + error,
-            new[] {
-                new PanelFact("状態", engine.DisplayState),
-                new PanelFact("更新間隔", $"{config?.IntervalSeconds ?? 60} 秒"),
-                new PanelFact("モニター", string.Join(" / ", StableScreensProvider.Screens.Select((s, i) => $"{i + 1}: {s.Bounds.Width}×{s.Bounds.Height}"))),
-                new PanelFact("画像ソース", string.Join(" / ", config?.Monitors.Select((m, i) => $"{i + 1}: {m.SourceFolders().Count()}フォルダー") ?? [])),
-                new PanelFact("バージョン", typeof(WallpaperApplet).Assembly.GetName().Version!.ToString(3)),
-            }, new[] {
-                new PanelAction("開始／再開", services.ExtensionId + ".settings.slideshowEnabled.on"),
-                new PanelAction("停止", services.ExtensionId + ".settings.slideshowEnabled.off"),
-                new PanelAction("開始／停止を切り替え", services.ExtensionId + ".settings.slideshowEnabled.toggle"),
-                new PanelAction("次の壁紙に更新", services.ExtensionId + ".next"),
-                new PanelAction("データフォルダーを開く", services.ExtensionId + ".data"),
-            }), token);
-        await services.Ui.ShowPanelAsync(panel, token);
     }
     public async Task HandlePageFileRemovedAsync(string pageId, string file, CancellationToken token)
     {
@@ -121,7 +97,7 @@ internal sealed class WallpaperApplet(Form dispatcher, ISlideshowController engi
     private async Task RefreshStateAsync()
     {
         try {
-            await PublishAsync(CancellationToken.None);
+
             if (context is not null && history is not null) await history.PublishAsync(CancellationToken.None);
         }
         catch (Exception error) { if (context is not null) AppLog.Error("表示状態の更新", error); }

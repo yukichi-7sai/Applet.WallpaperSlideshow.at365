@@ -5,20 +5,14 @@
   "displayName": "WallpaperSlideshow",
   "icon": "image",
   "tagline": "お気に入りの景色を、デスクトップに。",
-  "version": "0.13.3",
-  "minimumHostVersion": "0.140.0",
+  "version": "0.14.0",
+  "minimumHostVersion": "0.180.0",
   "startupDelaySeconds": 30,
   "updateRepository": "yukichi-7sai/Applet.WallpaperSlideshow.at365",
   "runtime": "native",
   "entry": "Applet.WallpaperSlideshow.at365.exe",
   "description": "モニターごとの複数フォルダーから壁紙を再生。タイル・フォルダー監視・AppDock内の履歴に対応します。",
-  "capabilities": [
-    "ui",
-    "settings",
-    "storage",
-    "source-images",
-    "pages"
-  ],
+  "capabilities": ["ui", "settings", "storage", "source-images", "pages"],
   "settings": [
     {
       "title": "壁紙のスライドショー",
@@ -27,11 +21,7 @@
       "description": "[command:at365.wallpaper-slideshow.settings.slideshowEnabled.on]、[command:at365.wallpaper-slideshow.settings.slideshowEnabled.off]、[command:at365.wallpaper-slideshow.settings.slideshowEnabled.toggle]からも操作できます。ロック・リモート接続による停止は別に維持します。",
       "type": "boolean",
       "automation": true,
-      "generateCommands": [
-        "on",
-        "off",
-        "toggle"
-      ]
+      "generateCommands": ["on", "off", "toggle"]
     },
     {
       "maximum": 2147483,
@@ -56,9 +46,7 @@
           "title": "画像ソースフォルダー",
           "type": "string-list",
           "default": [],
-          "aliases": [
-            "Folder"
-          ],
+          "aliases": ["Folder"],
           "format": "directory"
         },
         {
@@ -148,11 +136,7 @@
       ],
       "itemTitle": "モニター",
       "list": {
-        "columns": [
-          "Folders",
-          "Mode",
-          "TileCount"
-        ],
+        "columns": ["Folders", "Mode", "TileCount"],
         "titleKey": "Folders",
         "showIndex": true,
         "confirmDelete": true
@@ -231,10 +215,17 @@
       "title": "Windowsの背景設定を開く"
     }
   ],
-  "pages": [{
-    "id": "history", "title": "最近使った壁紙", "icon": "image", "source": "local",
-    "ui": "web/history.html", "openCommand": "at365.wallpaper-slideshow.history", "defaultDisplay": "page"
-  }],
+  "pages": [
+    {
+      "id": "history",
+      "title": "最近使った壁紙",
+      "icon": "image",
+      "source": "local",
+      "ui": "web/history.html",
+      "openCommand": "at365.wallpaper-slideshow.history",
+      "defaultDisplay": "page"
+    }
+  ],
   "settingActions": [
     {
       "title": "Windowsの背景設定を開く",
@@ -249,18 +240,13 @@
       "id": "playback",
       "title": "スライドショー",
       "description": "壁紙の再生状態と切り替え間隔を設定します。",
-      "settings": [
-        "slideshowEnabled",
-        "intervalSeconds"
-      ]
+      "settings": ["slideshowEnabled", "intervalSeconds"]
     },
     {
       "id": "monitors",
       "title": "モニターと画像",
       "description": "モニターごとに画像フォルダーと並べ方を設定します。",
-      "settings": [
-        "monitors"
-      ]
+      "settings": ["monitors"]
     },
     {
       "id": "history",
@@ -280,9 +266,7 @@
       "title": "Windowsの背景",
       "description": "停止中に見えるWindows側の背景を確認できます。",
       "settings": [],
-      "actions": [
-        "at365.wallpaper-slideshow.background-settings"
-      ],
+      "actions": ["at365.wallpaper-slideshow.background-settings"],
       "collapsible": true
     }
   ]

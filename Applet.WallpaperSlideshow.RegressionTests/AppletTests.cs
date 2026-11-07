@@ -112,8 +112,8 @@ internal static class AppletTests
                     Path.Combine(folder, new string('p', 220), new string('n', 220) + i + ".png"), config.History.Limit);
             }
         }
-        public void Configure(Config config) { HistoryManager.Instance.SetConfig(config); }
-        public void Pause(bool paused) { IsPaused = paused; if (paused) presenter.Pause(); else if (!presenter.HasImage) Display(); }
+        public void Configure(Config config) { HistoryManager.Instance.SetConfig(config); Console.Error.WriteLine("FIXTURE_INTERVAL " + config.IntervalSeconds); }
+        public void Pause(bool paused) { Console.Error.WriteLine("FIXTURE_PAUSED " + paused); IsPaused = paused; if (paused) presenter.Pause(); else if (!presenter.HasImage) Display(); }
         private int sequence;
         public void Next() {
             if (!IsPaused) Console.Error.WriteLine("FIXTURE_NEXT_WALLPAPER");

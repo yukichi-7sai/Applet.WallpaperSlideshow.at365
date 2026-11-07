@@ -345,9 +345,6 @@ const translucentBackdrop = async (selector) => {
     );
     const initial = await main.evaluate(() => window.dock.snapshot());
     const applet = initial.extensions.find((e) => e.id === manifest.id);
-    assert.equal(applet.panel.images, null);
-    assert.equal(applet.panel.tabs, null);
-    assert(!applet.panel.actions.some((a) => a.command.endsWith(".history")));
     assert(
       !applet.commands.some((c) => /\.history\.(previous|next)$/.test(c.id)),
     );

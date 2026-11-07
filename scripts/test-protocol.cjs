@@ -16,8 +16,7 @@ const fixture = path.join(
   const values = new Map(),
     logs = [],
     calls = [];
-  let panel,
-    pageOpened = false,
+  let pageOpened = false,
     settingsOpened = false,
     diagnostics = "",
     stopped = false,
@@ -40,10 +39,6 @@ const fixture = path.join(
         assert.equal(params.scope, "memory");
         assert.equal(params.key, "history-snapshot");
         return values.get(params.key) ?? null;
-      }
-      if (method === "host.ui.panel") {
-        panel = params;
-        return null;
       }
       if (method === "host.log") {
         logs.push(params);
@@ -81,6 +76,13 @@ const fixture = path.join(
       throw Error("Unexpected native API " + method);
     },
   );
+  async function waitFor(check) {
+    const deadline = Date.now() + 15000;
+    while (!check()) {
+      assert(Date.now() < deadline, "native fixture state did not arrive");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
   const settings = {};
   const configure = async (change) => {
     Object.assign(settings, change);
@@ -106,45 +108,22 @@ const fixture = path.join(
         /\.(resume|history\.previous|history\.next)$/.test(command.id),
       ),
     );
-    assert.deepEqual(
-      panel.actions.slice(0, 3).map((action) => action.command),
-      ["on", "off", "toggle"].map(
-        (value) =>
-          "at365.wallpaper-slideshow.settings.slideshowEnabled." + value,
-      ),
-    );
-    assert.equal(
-      panel.facts.find((fact) => fact.label === "状態").value,
-      "表示中",
-    );
     await configure({ slideshowEnabled: false });
     await command("next");
     assert(!diagnostics.includes("FIXTURE_NEXT_WALLPAPER"));
     await configure({ slideshowEnabled: true });
     await command("next");
     await configure({ slideshowEnabled: false });
-    assert.match(
-      panel.facts.find((fact) => fact.label === "状態").value,
-      /停止中/,
-    );
     await configure({ intervalSeconds: 7 });
-    assert.equal(
-      panel.facts.find((fact) => fact.label === "更新間隔").value,
-      "7 秒",
-    );
+    await waitFor(() => diagnostics.includes("FIXTURE_INTERVAL 7"));
     await configure({ intervalSeconds: 0 });
-    assert.match(panel.description, /設定エラー/);
-    assert.equal(
-      panel.facts.find((fact) => fact.label === "更新間隔").value,
-      "7 秒",
-    );
+    await waitFor(() => logs.some((entry) => entry.level === "error"));
+    assert(diagnostics.includes("FIXTURE_INTERVAL 7"));
     await configure({ intervalSeconds: 7 });
     await assert.rejects(command("prepare-background"));
     await command("background-settings");
     await command("history");
     assert(pageOpened);
-    assert.equal(panel.images, null);
-    assert.equal(panel.tabs, null);
     assert.equal(values.get("history").schemaVersion, 1);
     assert.equal(paths(0).length, 7);
     assert.equal(paths(1).length, 1);
