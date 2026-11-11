@@ -161,10 +161,18 @@ module.exports = async function checkSettings({
       }
     }
     const snapshot = await page.evaluate(() => window.dock.snapshot());
-    assert(
-      snapshot.logs.some(
-        (l) => l.source === "automation" && l.message.includes(update.id),
-      ),
+    assert.equal(
+      snapshot.logs,
+      undefined,
+      "host snapshots do not contain log payloads",
+    );
+    const { readLogs } = require(path.join(host, "scripts/test-logs.cjs"));
+    await require(path.join(host, "scripts/page-test-host.cjs")).until(
+      () =>
+        readLogs(profile).some(
+          (l) => l.source === "automation" && l.message.includes(update.id),
+        ),
+      "settings command audit log is persisted",
     );
     return await get();
   } finally {

@@ -1,5 +1,13 @@
 # 検証記録
 
+## 2026-11-12 AppDock共通選択ルールの独立Window検証と履歴GUI試験の更新
+
+- 製品コード・版・発行物は変更していない。クリーンな`main`（`44ff4791`）の最新取得後、既存の履歴GUI試験とMCP監査ヘルパーだけを修正した。共通仕様は[ローカル画面の選択](../AppDock.at365/docs/appearance.md#ローカル画面の選択)を参照する。
+- AppDock 0.224.1の固定EXE `8313d50398cff99654852161622d391f69fe93a0f1ccd791042b2908b48154e7`とnative fake engineで`test-history-page-ui.cjs` 19群成功。実際の「最近使った壁紙」の別Windowで見出しのダブルクリックとページ全体のCtrl+Aが文書選択を生まないことを追加確認した。選択カード、プレビュー前後移動、page/window/pageの同一View、設定の往復、MCP更新、再起動後の画像サイズ保持も成功した。実壁紙・Explorer/NAS・ごみ箱操作へは接続していない。
+- 廃止済みの「Windowsの背景」のdetails展開を前提にした検査を取り除き、実際の操作ボタンの表示を検証する。保存保持のfixtureは廃止owner条件から現行app条件（必須appletIds配列を含む）へ変更し、不明コマンドの無効行を保持する検査は維持した。snapshotにログ本文がないことを確認し、監査ログはホスト共通`test-logs.cjs`から読む。更新確認の匿名通信を全入口で明示的に無効にした。
+- 失敗した旧前提のログと、必須配列を落とした修正fixtureの起動失敗を保持した。後者は現行スキーマで原因を特定し、隔離プロセスだけを終了、配列補正後にスキーマと全GUIを再確認した。最終成功profileは`.artifacts/history-page-ui-1794425376955/`、照合記録は`.artifacts/commit-validation-local-selection-20261112/validation.json`。完全な実行ログ/配布物照合はAppDock側の同名証跡フォルダーを参照する。
+- 試験5件は関係プロセスが終了したことと配布元hashを確認して、専用EXE/runtimeを各14ファイル（計70）削除した。結果・画像・Web素材・manifest、共通ホストruntimeと元の回帰ビルドは保持する。試験と記録のローカルコミットのみで、再発行・push・Releaseは行わない。
+
 ## 2026-11-07 設定画面のSection整理（0.15.0）
 
 - `history` Sectionの見出しを「最近使った壁紙」へ変更し、`windows`とともに折りたたみを除去した。共通`settingSections[].pages: ["history"]`で表示方法を先頭へ配置し、独立した「ページの表示」Sectionを不要にした。Section/ページ/設定/コマンドのID、既定値、共有/端末別保存、MCP公開は保持。

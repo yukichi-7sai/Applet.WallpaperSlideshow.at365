@@ -65,6 +65,7 @@ settings.host.theme = "light";
 settings.globalShortcutCommands = [];
 settings.gestures.enabled = false;
 settings.updates.checkHostOnStartup = false;
+settings.updates.checkHostOnAboutOpen = false;
 settings.updates.checkAppletsOnStartup = false;
 settings.extensions[manifest.id] = {
   enabled: true,
@@ -82,7 +83,7 @@ settings.keybindings.push({
   key: "Ctrl+Alt+F11",
   enabled: false,
   global: false,
-  when: { scope: "owner", appletIds: [] },
+  when: { scope: "app", appletIds: [] },
 });
 fs.writeFileSync(
   require(path.join(host, "scripts/test-settings.cjs")).file(profile),
@@ -981,6 +982,32 @@ const translucentBackdrop = async (selector) => {
       "standalone width",
     );
     assert.equal(await ui.locator("main").getAttribute("data-marker"), marker);
+    const previousHistoryFocus = await ui.evaluateHandle(
+      () => document.activeElement,
+    );
+    const historyHeading = ui.getByRole("heading", {
+      name: "最近使った壁紙",
+      exact: true,
+    });
+    await historyHeading.dblclick();
+    assert.equal(await ui.evaluate(() => window.getSelection().toString()), "");
+    await historyHeading.evaluate((heading) => {
+      heading.tabIndex = -1;
+      heading.focus();
+    });
+    await historyHeading.press("Control+a");
+    assert.equal(await ui.evaluate(() => window.getSelection().toString()), "");
+    await historyHeading.evaluate((heading) =>
+      heading.removeAttribute("tabindex"),
+    );
+    await previousHistoryFocus.evaluate(
+      (element) =>
+        element?.isConnected && element.focus({ preventScroll: true }),
+    );
+    await previousHistoryFocus.dispose();
+    checks.push(
+      "standalone history blocks native heading selection and document Ctrl+A without changing Applet selection",
+    );
     const temporarilyMissing = await ui
       .locator(".ad-gallery-card")
       .first()
@@ -1173,11 +1200,6 @@ const translucentBackdrop = async (selector) => {
       slideshowEnabled,
       "opening links does not execute pause commands",
     );
-    const windowsSection = main.locator("details").filter({
-      has: main.getByText("Windowsの背景", { exact: true }),
-    });
-    if (!(await windowsSection.evaluate((section) => section.open)))
-      await windowsSection.locator("summary").click();
     const backgroundAction = main.getByRole("button", {
       name: "Windowsの背景設定を開く",
       exact: true,
