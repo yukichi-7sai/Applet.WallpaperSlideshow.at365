@@ -4,7 +4,7 @@
 
 ## 発行先
 
-標準発行先は `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365` です。`publish.bat`はソースrepoから実行します。詳細は[共通発行手順](../AppDock.at365/docs/publishing.md)を参照してください。
+標準発行先は `.artifacts/publish` です。`publish.bat`はソースrepoから実行します。詳細は[共通発行手順](../AppDock.at365/docs/publishing.md)を参照してください。
 
 実装時のテスト選択、コミット前の必要回帰、リリース前のコミット/プッシュ確認と検証証跡の再利用は、[本体・Applet共通手順](../AppDock.at365/docs/development-workflow.md)に従います。この文書の試験コマンドは、その段階に応じて実行します。
 

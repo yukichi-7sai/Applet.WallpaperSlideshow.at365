@@ -3,3 +3,4 @@
 publish/
 .artifacts/
 *.user
+/publish.local.json

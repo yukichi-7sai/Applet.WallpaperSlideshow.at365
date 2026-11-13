@@ -1,5 +1,19 @@
 # 検証記録
 
+## 2026-11-14 コミット前の照合
+
+- 実装完了時に記録した134入力ファイルのSHA256が一致し、別作業の変更と既存stageがないことを確認。
+- 本repoは文書・Git除外・設定例だけの変更。リンクとdiff検査を再確認し、製品回帰・再発行は不要。
+- 発行済み8 ZIPのSHA256も一致し、検証済み配布物を維持。ローカル設定はGit管理外。照合後の変更は本検証記録の追記だけで、製品の追加修正・版更新・再発行なし。
+- 判定・成功ログ・stage/commit treeの照合記録は`.artifacts/commit-validation-publish-paths-20261114/`へ保存。コミットは対象ファイルに限定し、push・Release・実利用先配置は行わない。
+
+## 2026-11-14 発行先のローカル設定と公開記録の整理
+
+- 環境固有の出力先をGit管理外`publish.local.json`へ分離。相対値は設定ファイル基準、未設定時は各repo内`.artifacts/publish`。worktree専用の出力名と既存の明示出力先指定を維持。
+- 公開するコード・文書・検証記録から環境固有の出力名を除去。以前の記録は論理パスへ置換し、元の記録を各repoの`.artifacts/publish-paths-private-20261114/original/`へ保存。Git履歴は変更していない。
+- 本repoの変更は公開文書・検証記録・ローカル設定のGit除外。製品コード・版・配布内容の変更はなく、再発行/製品回帰は不要。共有発行先ヘルパーは本体の5項目で検証し、参照リンクとdiff検査を確認。
+
+
 ## 2026-11-12 AppDock共通選択ルールの独立Window検証と履歴GUI試験の更新
 
 - 製品コード・版・発行物は変更していない。クリーンな`main`（`44ff4791`）の最新取得後、既存の履歴GUI試験とMCP監査ヘルパーだけを修正した。共通仕様は[ローカル画面の選択](../AppDock.at365/docs/appearance.md#ローカル画面の選択)を参照する。
@@ -14,7 +28,7 @@
 - Commands/Settings/Pages/Ui.OpenSettingsAsync/Log、Memory Storage、ローカルページのsourceImages契約を現行SDK/Runtime 0.34.0と照合。廃止API呼出しは残っていなかった。開発/利用文書の旧パネル・サムネイルファイル・ログタブの説明を現行仕様へ更新。新しいmanifest契約の最低ホスト版0.183.0に合わせminor更新し、発行前レビューで阻害事項なし。
 - 標準native回帰9群、RPC fixture6群と発行EXEの接続・不正設定の実デスクトップ接続前の拒否・共通ログ・自身のHWNDへのquery/cancel/end・EOF終了が成功。最終固定本体0.183.2で設定GUI11群と、履歴の設定ボタン/パレットからの移動・戻る/進む各1回が成功。表示方法の保存と再表示、共有設定の不変、明暗1280/700幅、既存モニター一覧編集・取消・競合を確認。ページだけのSectionのfixtureでは重複なし、未配置ページの共通Sectionへの残留も確認した。
 - 初回GUIは既定のpage指定が省略保存される契約に検査を修正。700幅のWindows背景ボタンのはみ出しは本体共通部品で修正し、旧EXEで失敗・最終EXEで成功を確認した。狭幅の長いSection全体の撮影はviewportを変えてしまうため、見出し/表示方法を個別に撮影。失敗ログと画像を保持した。
-- publish.batは終了0。`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`のmanifest/EXE/feedは0.15.0、最低ホスト0.183.0、ZIP11ファイルと発行先、元web資産9件のSHA256が一致。EXE SHA256 `d1413b6a7e98c5023b951d522c49d67d7d6bad4680b6754b13762e6a5b689513`、update.zipは203,362 bytes / `bd8d62f3778abd229403191cd9ece3a4c2231c85494d67f37eb71f7828b4956f`。
+- publish.batは終了0。`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`のmanifest/EXE/feedは0.15.0、最低ホスト0.183.0、ZIP11ファイルと発行先、元web資産9件のSHA256が一致。EXE SHA256 `d1413b6a7e98c5023b951d522c49d67d7d6bad4680b6754b13762e6a5b689513`、update.zipは203,362 bytes / `bd8d62f3778abd229403191cd9ece3a4c2231c85494d67f37eb71f7828b4956f`。
 - 正本は`.artifacts/settings-sections-20261107/`のinputs-final、各ログ、packages-final（Applet0.15.0）/host-package-1832、cleanup。最終GUIは`monitor-list-ui-1794059552485`と`history-page-ui-settings-navigation-1794059598041`。本体126件等は`../AppDock.at365/.artifacts/wallpaper-settings-20261107/`。終了確認後に今回の専用実行物24件をhash記録して回収し、共用runtime・全記録・画像を保持。既存フォルダーは状態/所有が不明、今回の成功も方法ごと3回未満なので全体削除なし。実ユーザーの壁紙/画像やWindows背景設定は変更していない。mainで本体対応と別のローカルコミットにまとめ、push・Release・実利用先配置は行わない。
 
 ## 2026-11-07 共有Desktop Runtimeへ変更（0.14.1）
@@ -23,7 +37,7 @@
 - WinForms・描画・Web資産・設定・保存・公開API・最低本体0.180.0を維持した。既に本体が要求するDesktop Runtimeを共有する配布方法の変更として0.14.0→0.14.1へパッチ更新。開発文書と動作環境へ環境のランタイムを使う方針を記載し、共通文書へ接続した。発行前レビューは圧縮設定と試験トレース上書きへの対応後、阻害事項なし。
 - Release solution buildは警告/エラー0、標準native回帰9群成功。fixtureのRPC6群と、発行EXEの接続・実デスクトップへのアクセス前の不正設定拒否・共通エラーログ・自身のHWNDへのquery/cancel/end・正常終了が成功した。履歴Web資産とページ処理は未変更のため履歴GUI全回帰は追加実行していない。
 - `publish.bat`成功。埋め込みruntimeconfigはMicrosoft.NETCore.App/WindowsDesktop.App 10.0.0の共有framework参照で、includedFrameworksとランタイムDLLの同梱なし。実起動のhost traceでPC側の共有ランタイム使用、EOF終了0を確認し、空のDOTNET_ROOT_X64では2147516547で失敗することを確認した。PCのランタイム導入状態は変更していない。
-- `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ0.14.1を発行。EXEは51,756,931→410,266 bytes、SHA256=`5bf9e54314506efa4c49ea7bbcf90c7fc8d2843a66b8c8cbd39b339ab2240d61`。update.zipは46,336,192→203,353 bytes、SHA256=`3500c8bdc59897948efc10950f8db74e58200c1fe02c9ee3b1fdee22dcd07306`。ZIP全11ファイル・manifest/feed・EXEの版/サイズ/ハッシュ、発行Web資産とソースの一致を確認した。
+- `<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`へ0.14.1を発行。EXEは51,756,931→410,266 bytes、SHA256=`5bf9e54314506efa4c49ea7bbcf90c7fc8d2843a66b8c8cbd39b339ab2240d61`。update.zipは46,336,192→203,353 bytes、SHA256=`3500c8bdc59897948efc10950f8db74e58200c1fe02c9ee3b1fdee22dcd07306`。ZIP全11ファイル・manifest/feed・EXEの版/サイズ/ハッシュ、発行Web資産とソースの一致を確認した。
 - 完全ログ・runtimeconfig・bundle一覧・host traceは`.artifacts/shared-runtime-20261107/`。入力ハッシュ・発行前レビュー・配布照合は`../AppDock.at365/.artifacts/shared-runtime-20261107/`。今回の成功をコミット判定へ再利用し、stage/commit treeは各repoの`.artifacts/commit-validation-shared-runtime-20261107/`へ記録する。追加の専用実行物コピーなし、空のランタイム検査用rootは回収済み、過去の証跡を保持した。
 - 実Explorerへの表示・実壁紙/画像・ロック/RDP/実OS終了・長期再生は今回の確認対象外。push・Release・実利用先配置は行わない。
 
@@ -50,7 +64,7 @@
 - 発行前レビューで、共通設定コマンドへの集約、既存ID、画像/世代保持の解放、設定保存不変、停止時View破棄を確認し、阻害指摘なし。設定・保存形式・公開API・最低本体0.140.0の変更がないため0.13.2から0.13.3へパッチ更新した。
 - `publish.bat`終了0。発行本体0.147.2と発行Web資産を使うGUI18群が成功（`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793805805497`）。実ボタンと実パレットからの設定移動、各1回の戻る/進む、View保持、非表示時の画像/Blob URL/世代保持の解放、設定不変、従来のプレビュー/選択/明暗/独立Window/MCP/停止回収を確認した。
 - 自動更新専用GUI6群も成功（`history-page-ui-refresh-mode-1793805847008`）。OFF時の固定履歴、明示更新、ON/OFF切替、設定から再表示した際の最新履歴、ホスト/プロセス再起動後の保存値を確認。RPC fixture6群はhomeが自己設定APIだけへ取り次ぐことを含め成功し、発行EXEの起動/不正設定拒否/共通ログ/限定HWNDのquery-cancel-end/正常終了も成功した。
-- `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`のEXE/manifest/feedの0.13.3、最低本体0.140.0、ソースWeb資産と発行物、ZIP全11ファイルが一致。ZIP SHA256=`56f0314e4f6da1fcbcf8e2b615ba43a64d9b74add7ad10ab56c7f6cbd154e97f`、46,338,078 bytes。
+- `<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`のEXE/manifest/feedの0.13.3、最低本体0.140.0、ソースWeb資産と発行物、ZIP全11ファイルが一致。ZIP SHA256=`56f0314e4f6da1fcbcf8e2b615ba43a64d9b74add7ad10ab56c7f6cbd154e97f`、46,338,078 bytes。
 - 証跡は`.artifacts/settings-navigation-20261105/`。Applet67入力と本体1,059入力、完全ログ/終了コード、レビュー、配布物と実行物のSHA256、最終入力一致を記録。実行環境は固定Node 26.13.0/pnpm12.15.0、.NET SDK10.0.403、Windows10.0.26300。背面描画/監視の全native回帰は今回の変更対象外のため追加実行していない。
 - 今回4profileのプロセス終了・実パス・再解析ポイントを確認し、専用EXE/DLL等56ファイル（3,180,308 bytes）を削除。383ファイルの結果/画像/設定等はハッシュ一致で保持。発行Web資産GUIの成功最新3件を残し、旧成功`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793800752943`を1件整理。失敗証跡と共用本体/固定build出力は保持した。
 - 実利用の壁紙・画像・設定、実Explorer/実NAS/実ごみ箱/関連付けアプリは操作していない。ユーザー環境での実利用確認、commit・push・GitHub Release・実利用先への配置は未実施。
@@ -69,7 +83,7 @@
 - 発行前レビューで、明示操作時だけのスクロール、固定した履歴順でのページ追従、フォーカス、保留中の更新、画像の解放、既存の欠損画像処理を確認。画面画像を目視確認し、阻害指摘なし。設定・保存ファイル・公開API・最低本体版0.140.0の変更がないため0.13.2へパッチ更新した。
 - 固定本体EXEのソースGUI16群、発行Web資産と長いprofileパスを使うGUI16群が成功。一部だけ見えるカードのクリック、狭幅の複数行での連続前後移動、ダイアログを開いたままでのページ追従とカード可視性、ダイアログ内のフォーカス、閉じた後の選択、手動スクロールを確認。既存の半透明/明暗/85%サイズ/欠損画像/削除fixture/画像解放も成功した。
 - `publish.bat`のRelease build・発行が終了0。発行EXEの起動、不正設定拒否、共通ログ、限定HWNDのquery/cancel/end、正常終了とRPC fixture 6群が成功。今回変更していないJS状態/保存モジュール単体、native描画/監視の全回帰、自動更新専用GUIは追加実行していない。GUIのnative fixtureは同一ソース/SDK/Runtimeの既存build出力を使用し、実行物ハッシュを保存した。
-- 発行先は`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`。EXE/manifest/feedの0.13.2、最低本体0.140.0、ソースとWeb資産、更新ZIPの全11エントリーと配布ファイルが一致。ZIP SHA256は`8807749ad5cfef450cb27abb1d2996384a1e7cc7a79fb6c56af62a39154acc63`（46,338,200 bytes）。
+- 発行先は`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`。EXE/manifest/feedの0.13.2、最低本体0.140.0、ソースとWeb資産、更新ZIPの全11エントリーと配布ファイルが一致。ZIP SHA256は`8807749ad5cfef450cb27abb1d2996384a1e7cc7a79fb6c56af62a39154acc63`（46,338,200 bytes）。
 - 証跡は`.artifacts/selection-scroll-20261104/`。入力92ファイル、開始差分、レビュー、完全ログ/終了コード、実行物/配布物ハッシュと最終照合を保存。GUI画像/結果は`history-page-ui-1793804044503/`と`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793804152527/`。
 - プロセス終了・実パスを確認して今回の専用EXE/.NETコピー28ファイル（1,591,906 bytes）を削除し、248ファイルの証跡をハッシュ一致で保持。発行GUI成功分の最新3件を残し、古い成功フォルダー`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793790692910/`を1件整理。削除前の結果とファイル一覧/ハッシュを保存し、失敗分・共用本体・固定build出力は保持した。
 - 実利用の壁紙・画像・設定、実Explorer/実NAS/実ごみ箱/関連付けアプリは操作していない。実利用確認、commit・push・GitHub Release・実利用先への配置は未実施。
@@ -83,7 +97,7 @@
 - 発行前に操作契約、非同期更新とフォーカス、画像参照の寿命、保存/API、版と試験範囲をレビュー。初回GUIでは追加したページ移動を既存の初期DOM安定性検査が数えて失敗したため、測定区間を分けた。選択枠が画像に隠れないよう疑似要素で重ね、修正後のソースGUI15群が成功。初回失敗ログも保持し、選択枠とプレビューの画面画像を目視確認した。発行阻害指摘なし。
 - .NET SDK 10.0.403のRelease solution build成功（警告/エラー0）、固定Node 26.13.0の履歴JSモジュール14件成功。重複パス、開いた順序の維持、選択の更新追従/解除、画像の解放を含む。自動更新専用GUI6群も成功し、OFF/ON、凍結した履歴のページ送り、View/ホスト再起動後の端末別保存を確認した。
 - `publish.bat`終了0。発行Web資産と長いprofileパスによる固定本体GUI15群が成功。キー/端のクリック、連続移動の遅延decode、3通りの閉じ方、フォーカスを外した後の選択、設定変更後のページ復帰、欠損画像、単一画像の別モニター、既存の半透明/明暗/狭幅/独立Window/削除fixture/画像解放を確認した。発行native EXEの起動・不正設定拒否・共通エラーログ・限定HWNDのquery/cancel/end・正常終了と、RPC fixture 6群も成功した。
-- 発行先は`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`。EXE/manifest/feedの0.13.1、最低本体0.140.0、Web資産とソース、更新ZIPの全11エントリーと発行ファイルが一致。ZIP SHA256は`e7d5c1f658d6e886d7a89c5f55dc34c30280b22ebdfba3cfc4bd48df4ace5679`（46,338,022 bytes）。
+- 発行先は`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`。EXE/manifest/feedの0.13.1、最低本体0.140.0、Web資産とソース、更新ZIPの全11エントリーと発行ファイルが一致。ZIP SHA256は`e7d5c1f658d6e886d7a89c5f55dc34c30280b22ebdfba3cfc4bd48df4ace5679`（46,338,022 bytes）。
 - 証跡は`.artifacts/preview-navigation-20261104/`。入力92ファイル、fixture実行物、完全ログ/終了コード、レビュー、配布物照合を保存。GUI結果と画像は`history-page-ui-1793802936430/`、`history-page-ui-refresh-mode-1793803044838/`、`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793803151283/`。失敗分`history-page-ui-1793802635882/`も保持した。
 - 今回の4試験のプロセス終了・実パスを確認して、専用EXE/.NETコピー56ファイル（3,183,812 bytes）を削除。結果・画像・manifest・Web fixture・dataの444ファイルをハッシュ一致で保持。各実行方式の成功分は3件以下のためフォルダー全体の削除なし。共用本体ランタイム・固定build出力は保持した。
 - 変更のない背面描画/フォルダー監視の全native回帰は追加実行していない。実Explorer・実NAS・実ごみ箱・関連付けアプリや利用者の実画像/設定を操作していない。ユーザー環境での実利用確認、commit・push・GitHub Release・実利用先への配置は未実施。
@@ -105,7 +119,7 @@
 - .NET SDK 10.0.403のRelease solution build成功、警告/エラー0。制限環境では終了1・警告/エラー0だったため、同じビルドを通常Windowsユーザー環境で再実行し成功。初回ログも保持。固定Node 26.13.0をdev.bat経由で使用し、JavaScript構文確認が成功した。
 - ソースWeb資産の固定本体GUI13群と、`--published-assets --long-cache`で発行Web資産を使用するGUI13群が成功。明暗テーマの半透明、透明/ブラー/影の即時変更、表示画像の保持、85%のサイズ、カード名を3文字へ短縮しても完全なファイル名を使うタイトル、背景/Esc/閉じる操作とフォーカスを確認。削除確認の半透明、取消/fixture削除、900px本体と独立Window、View/プロセス再生成、画像の解放・元画像消失、設定/MCP連携を含む。通常GUIに含まれる狭幅ページ検査も成功した。
 - `publish.bat`終了0。発行EXEの起動・不正設定拒否・共通エラーログ・限定HWNDのquery/cancel/end・正常終了と、RPC fixture 6群が成功。今回の変更と無関係なデスクトップ描画/監視の全native回帰、JS保存モジュールの全回帰、実Explorer/実NAS/実ごみ箱/関連付けアプリの操作は追加実行していない。
-- 発行先は`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`。EXE/manifest/feedの0.13.0と最低本体0.140.0、Web資産とソース、更新ZIPの全10エントリーと発行ファイルを照合。ZIP SHA256は`c3be90c8c7bd82c281a9f238c599f0c901c9cc920db2066a61e48d8f1dcbf970`（46,335,781 bytes）。
+- 発行先は`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`。EXE/manifest/feedの0.13.0と最低本体0.140.0、Web資産とソース、更新ZIPの全10エントリーと発行ファイルを照合。ZIP SHA256は`c3be90c8c7bd82c281a9f238c599f0c901c9cc920db2066a61e48d8f1dcbf970`（46,335,781 bytes）。
 - 証跡は`.artifacts/preview-dialog-20261104/`の入力89ファイル、fixtureの実行物ハッシュ、6成功コマンドの完全ログ/終了コード、レビュー、配布物のハッシュと最終照合。ソースGUI以降の入力と最終配布物は不変。GUI結果・画像は`.artifacts/history-page-ui-1793800622161/`と`.artifacts/history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793800752943/`。
 - 今回の試験プロセス終了とパス/ハッシュを確認して、隔離profile内の専用EXE/.NETコピー28ファイル（1,591,906 bytes）を削除。結果・画像・manifest・Web fixture・dataの234ファイルはハッシュ一致で保持。方式ごとの成功フォルダーは3件以下のためフォルダー全体の削除なし。共用本体ランタイムと固定build出力を保持した。
 - 実利用の壁紙・画像・設定は変更していない。ユーザー環境での実利用確認、commit・push・GitHub Release・実利用先への配置は未実施。
@@ -124,7 +138,7 @@
 - `.NET SDK 10.0.403`でRelease build成功、警告/エラー0。制限環境では終了1・警告/エラー0でビルドできず、通常ユーザー環境で同じコマンドを実行して成功。初回ログも保持した。native回帰9群が成功。追加した復旧試験は実際の一時フォルダーとFileSystemWatcherを使用し、タイマー通知を明示発火、表示接続はfakeとした。定期保守での再接続なし、停止中の自動/手動更新抑止、再開/自動/手動での復旧、通常変更通知、処理中の重複抑止、表示接続切断の検出を確認した。
 - `publish.bat`終了0。固定Node 26.13.0を`dev.bat`経由で使用し、`scripts/test-protocol.cjs`のRPC fixture 6群と発行EXEの起動・不正設定拒否・エラーログ・限定HWNDへのquery/cancel/end・正常終了が成功。
 - `scripts/test-memory-native.cjs`は発行EXEを`prepareTestApplet`で共用ランタイムへ配置し、元EXEとのSHA256を照合。試験用画像による実背面表示・自動更新と履歴進行・手動更新・HWND/配置保持・自身のHWND破棄からの復旧・停止/再開・限定HWNDへの終了通知の6群が成功。Windows壁紙設定/キャッシュの前後一致、Themes変更通知0件、エラーログ0件。結果は`.artifacts/memory-native-1793799340474/`。
-- `A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ発行。EXE/manifest/feedの0.12.2、最低本体版0.115.0、ZIPのサイズと全10エントリーのSHA256を発行物と照合。EXE SHA256: `341c56a50d486afc0b938b16f9cf2ed213a2760d039c30aa48dba60f707e5a87`。ZIP SHA256: `c3f6d3a2fa0b4ea0d5d9eae74b90539905274f74356fb1810d2ba3373945c1ca`（46,335,748 bytes）。
+- `<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`へ発行。EXE/manifest/feedの0.12.2、最低本体版0.115.0、ZIPのサイズと全10エントリーのSHA256を発行物と照合。EXE SHA256: `341c56a50d486afc0b938b16f9cf2ed213a2760d039c30aa48dba60f707e5a87`。ZIP SHA256: `c3f6d3a2fa0b4ea0d5d9eae74b90539905274f74356fb1810d2ba3373945c1ca`（46,335,748 bytes）。
 - 証跡は`.artifacts/validation-folder-watch-20261104/`。開始時/発行前の入力79ファイル、最終照合、各コマンドの完全ログ・終了コード、レビュー、成果物照合を保存。発行前の変更は試験用JSのみで、build/native回帰対象は不変。発行前から最終確認までの79入力も一致した。
 - UI/Web/設定保存/共通APIを変更していないため履歴GUIや本体全回帰は追加していない。実NASの切断/復帰、物理操作、実OSロック/RDP、Explorer本体の再起動、混在DPI変更は未確認。通常のmemory-native成功フォルダーは今回の1件のみで直近3件以内のため保持。専用EXEコピーは追加せず共用ランタイムを使用し、試験プロセスの正常終了を確認。commit・push・Release・実利用先への配置は行っていない。
 
@@ -142,7 +156,7 @@
 - 内部UIの所有分離として0.12.0から0.12.1へ更新し、最低本体0.115.0と公開APIを維持。発行前レビューで現行同梱版の再現・サイズ保存・画像寿命・外部依存・発行資産を確認し、未使用の選択CSSを除去。阻害指摘なし。
 - .NET buildは警告/エラー0、native回帰8群、履歴JS回帰11件、ソースWeb資産の履歴GUI13群成功。JS回帰の初回コマンドはdev.batによるcwd変更で相対パスを見失ったため、絶対パスで再実行して成功した。製品エラーではなく、初回ログも保持した。
 - 発行本体0.143.0と発行Web資産を隔離native fixtureへ配置し、履歴GUI13群と自動更新/再起動保存6群が成功。画像カード・プレビュー/背景/Escape/フォーカス・開く/削除のfixture・モニター/ページ送り・サイズ復元・View/プロセス再生成・画像の解放・元画像消失・設定/MCP連携を確認した。実配布EXEの接続・パネル・設定保存・停止は、本体の固定画像選択GUIのnative Applet連携でも確認した。
-- `publish.bat`終了0。`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ発行。更新ZIPの全10ファイルと発行物、Web資産とrepoソース、EXE/manifest/feedの0.12.1・最低本体版を照合し、旧vendorギャラリーが含まれないことを確認。ZIP SHA256は`061f37028a4b5da4f811fc0481c5e6086f7e871213cb6d25f04071af74908d7b`。
+- `publish.bat`終了0。`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`へ発行。更新ZIPの全10ファイルと発行物、Web資産とrepoソース、EXE/manifest/feedの0.12.1・最低本体版を照合し、旧vendorギャラリーが含まれないことを確認。ZIP SHA256は`061f37028a4b5da4f811fc0481c5e6086f7e871213cb6d25f04071af74908d7b`。
 - 証跡は`.artifacts/gallery-split-20261104/`の各コマンドJSON/完全ログ、入力ハッシュ、旧同梱版の元ソース照合、`review.json`、`commands-summary.json`、`artifacts.json`。試験終了後に本repoの専用native/.NETコピー42ファイルを整理した。結果・画像・設定・data・manifest・Web fixture・固定buildを保持。合計60ファイルの整理一覧は本体側の同名証跡の`cleanup-files-before.json`にある。
 - 実利用の壁紙・画像・設定は変更していない。実Explorer背面表示・物理入力/複数モニターDPI・実NAS・実関連付けアプリ/ごみ箱操作は今回未実施。コミット・push・GitHub Release・実利用先deployは行っていない。
 
@@ -153,7 +167,7 @@
 
 ## 2026-11-03 開発用配置スクリプトの除去
 
-- deployment一式と40.ARTIFACT内の配置用スクリプト・記入例・配置先設定を、存在する範囲で削除した。publishから専用コピー処理を外し、開発文書と不要なGit除外規則を整理した。
+- deployment一式と<PUBLISH_ROOT>内の配置用スクリプト・記入例・配置先設定を、存在する範囲で削除した。publishから専用コピー処理を外し、開発文書と不要なGit除外規則を整理した。
 - 差分レビューで既存のビルドと更新ZIP/JSON生成を保持していることを確認した。変更スクリプトの構文・現行の廃止ファイル参照・git diff --checkと、本体を含む全9repoの発行先計算を確認した。発行先の配置ツール以外のファイルは削除前後のSHA256が一致した。
 - 製品コード・manifest・依存・設定/保存仕様と配布payloadは変更していない。開発用配置ツールの整理として製品版更新・再ビルド・再発行なし。製品回帰・GUI・実利用先配置・commit・push・Releaseは実施していない。共通の削除一覧・ハッシュ・検証結果は../AppDock.at365/.artifacts/deploy-removal-20261103/を参照する。過去の検証記録は履歴として保持する。
 
@@ -184,7 +198,7 @@
 - 「壁紙のスライドショー」は`slideshowEnabled`、既定true、ONで再生・OFFで停止。生成コマンドはsettings.slideshowEnabled.on/off/toggleへ変更し、パネルと説明リンクを更新。旧pausedと共通tileMarginは保存データから削除せず参照対象から外す。旧pausedの生成コマンドは提供しない。画像設定の検証前に手動停止を反映し、ロック/リモートの独立した停止理由は保持。設定の追加/削除と最低本体版0.115.0への引上げにより0.11.0→0.12.0。
 - 発行前レビューでmodel/validation/render、設定/公開コマンド、共通入力条件、既定値・保存境界・最低版を照合し、製品の阻害指摘なし。native回帰8群終了0。2画面で余白0/40pxの描画差、旧共通値300を継承しない10px、負値/上限超過/NaN拒否を確認。RPC6群と発行nativeの不正設定拒否・限定HWND終了処理・正常終了も成功。
 - 固定本体0.115.0と発行Appletで設定GUI9群成功（`.artifacts/monitor-list-ui-1793512989188/`）。10px、Tile時のみ入力、24/48pxの独立保存/再表示、モード切替時の値保持、取消・競合・並べ替え・フォーカス・明暗/狭幅を確認。旧GUI手順の画面名/操作/保存先/配布コピー/既定省略を修正して成功。固定本体/発行Web資産/native fixtureの履歴GUI13群成功（`.artifacts/history-page-ui-1793513004079/`）。MCP7設定・公開schema・旧/非公開キー拒否・権限/dryRun/競合・新しいコマンド名とON/OFF/toggle保存・nativeサムネイル反映を確認。
-- publish.bat終了0、`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ発行。EXE SHA256 `dd104fed97e80e8d433889c0bbf2a592255b6bde87a9feb44109ce9a96e82375`、ZIP 46341148bytes / SHA256 `cd498646fd32a9ed4b5d93ed066c90a7ff93879ca4ef4e020eed4e5a919efbda`。ZIP全11ファイルと発行物、manifest/feedの版・最低版を照合。配置スクリプトと利用者データ保持。
+- publish.bat終了0、`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`へ発行。EXE SHA256 `dd104fed97e80e8d433889c0bbf2a592255b6bde87a9feb44109ce9a96e82375`、ZIP 46341148bytes / SHA256 `cd498646fd32a9ed4b5d93ed066c90a7ff93879ca4ef4e020eed4e5a919efbda`。ZIP全11ファイルと発行物、manifest/feedの版・最低版を照合。配置スクリプトと利用者データ保持。
 - 証跡`.artifacts/monitor-settings-20261101/{validation,review,inputs-before-publish,inputs-final}.json`と各完全ログ。本体側`.artifacts/wallpaper-settings-20261101/cleanup.json`で終了/リンクなし/絶対パスを照合し、旧成功2件と解消済み失敗5件の実行コピーだけ整理。結果/失敗記録/画像/設定/manifestは保持。
 - 実利用の壁紙・画像・設定は変更していない。実背面配置・Explorer再起動・物理ロック/RDP・実NAS/関連付けアプリ/ごみ箱は未実施。commit/push/Release/実利用deployなし。
 
@@ -200,7 +214,7 @@
 - 設定を直接開く本体0.114.0・SDK/Runtime 0.28.0のAPIを使うため、最低本体版を0.114.0へ上げ、0.10.0→0.11.0へマイナー更新。設定キー/既定値/保存形式・壁紙エンジンは変更していない。詳細と共通API/版更新の判断は`../AppDock.at365/docs/applet-pages.md`と本体の検証記録。
 - 発行前レビューで、設定変更を保留したプレビューを閉じるとフォーカスが消える場合を修正した。更新処理の完了後に復帰し、新しい操作先のフォーカス・非表示状態を保護する。本体側も、履歴を破棄したときの既定ページへの移動と設定選択との競合を修正し、表示本文と編集状態の一致を確認した。阻害指摘なし。
 - Releaseの直列Rebuildは警告/エラー0、native回帰/RPCと発行EXEの安全な起動拒否/自身のHWND/正常終了が成功。共通APIと設定/配色/履歴の計97件がfail/skip 0。ソースと発行済み固定EXEの履歴/設定GUI13群・NASを模したGUI13群、固定EXEの自動更新6群が成功した。プレビューの背景/影を開いたまま独立して変更できること、クリック/ドラッグ/Esc/フォーカス、設定直行、3つのリンクの選択/非実行/取消、PC専用保存と画像解放も確認した。中央寄せ、コマンドリンク、グレーボタンを目視確認した。
-- publish.batは終了0。`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ0.11.0を発行し、EXE **51761801 bytes / SHA256 `b0fabed3c29e0fa111edbe9671a8e909cdee9b9c334efc6d48d41e8e18256dfe`**、ZIP **46341094 bytes / SHA256 `979db548495db0845c81dd09bff11dec68d68b0d42b0cc59bca67d74dd1c03a6`**。全11ファイル/元Web資産9件、manifest/feed/EXEの版と最低本体版が一致した。共通ギャラリーの生成元manifestは本体0.114.0へ更新され、JS/CSSは不変。運用者所有の配置スクリプトと利用者データを保持した。
+- publish.batは終了0。`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`へ0.11.0を発行し、EXE **51761801 bytes / SHA256 `b0fabed3c29e0fa111edbe9671a8e909cdee9b9c334efc6d48d41e8e18256dfe`**、ZIP **46341094 bytes / SHA256 `979db548495db0845c81dd09bff11dec68d68b0d42b0cc59bca67d74dd1c03a6`**。全11ファイル/元Web資産9件、manifest/feed/EXEの版と最低本体版が一致した。共通ギャラリーの生成元manifestは本体0.114.0へ更新され、JS/CSSは不変。運用者所有の配置スクリプトと利用者データを保持した。
 - 共通の正本は`../AppDock.at365/.artifacts/wallpaper-history-ui-20261101/`のレビュー・完全ログ・入力・発行物照合・整理・最終記録。本repoの`.artifacts/wallpaper-history-ui-20261101/validation.json`から参照する。固定通常/NAS/自動更新の成功profileはそれぞれ`.artifacts/history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793504347256/`、`.artifacts/history-page-ui-network-delete-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793504359085/`、`.artifacts/history-page-ui-refresh-mode-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793504370927/`。一時画像/fixtureの検証であり、実NAS・実壁紙・Explorer再起動・実ロック/RDP・関連付けアプリ/実ごみ箱・Windows背景設定の起動は操作していない。
 - 旧固定コピーの整理は本体と合わせて4件/管理72項目、保護473ファイルのhash一致・失敗0・全フォルダー削除0。結果・画像・設定・data・extensions・manifestと再利用/失敗/調査記録を保持した。今回の履歴/設定表示の差分は未コミットで、push・Release・実利用deployは行っていない。
 
@@ -215,7 +229,7 @@
 - 全モニター/ページのパス一覧をJSの表示用メモリへ取得し、privateなMemory Storage `history-snapshot`で表示中・取得中の世代を保持する。これにより、背景で履歴が変わっても旧ページの元画像参照が無効にならない。画像の取得は引き続き遅延実行し、パス/画像のキャッシュファイルは作らない。非表示でJSの一覧・画像を解放し、homeではnativeも保持を解除して旧区間を回収する。明示的に削除した画像はOFFでも表示用一覧から除き、背景の新しい履歴を混ぜない。
 - 発行前レビューで、ON中の取得がOFF後に遅れて表示を変える競合、初期読込中の切替が保存済みカード幅を失う競合、取得拒否/受付不明時に表示済み区間が失われる問題を確認・修正した。非同期の区間整理を導入した際の失敗注入タイミングも明示的な待機へ合わせ、初回の失敗ログを保護した。最終のJS契約**11/11、fail/skip 0**、Release build警告/エラー0、native回帰・RPC・400文字超のパス1,000件の保持/解除が終了0。阻害指摘なし。
 - 最終ソースと発行済み固定EXEで自動更新の**6群**が成功。初期OFF・背景更新中のカード維持、旧世代でのページ送り、明示更新と旧区間回収、ON即時反映/後続追従、OFFで再固定/再表示、PC専用保存のホスト/native再起動での復元を確認した。従来の履歴GUIとNASを模した削除GUIも、それぞれソース/固定EXEの**11群**が成功。明暗/狭幅、プレビュー/確認/フォーカス、カード幅、画像解放と元画像不在の扱いを維持し、確認画面と新しいスイッチを目視確認した。発行native EXEの起動拒否・自身のHWND処理・正常終了も成功。
-- publish.batは終了0。`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ0.10.0を発行し、EXE **51761733 bytes / SHA256 `ec2479fda4eaa94fca1061537e8c0554eea90074679cbeb1346f7b4fcfdd5fe9`**、ZIP **46341021 bytes / SHA256 `6f8a4faa4344263a5e4b1a4cb3017779d24d90ebd60b0dae0a3f35769c08ec53`**を照合。ZIP全11ファイル、元Web資産9件、manifest/feedの版・最低本体版が一致し、本体0.113.0のZIPは先行発行時と不変。配置テンプレートも9資産に対応し、利用者所有の既存deployスクリプトは保持した。
+- publish.batは終了0。`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`へ0.10.0を発行し、EXE **51761733 bytes / SHA256 `ec2479fda4eaa94fca1061537e8c0554eea90074679cbeb1346f7b4fcfdd5fe9`**、ZIP **46341021 bytes / SHA256 `6f8a4faa4344263a5e4b1a4cb3017779d24d90ebd60b0dae0a3f35769c08ec53`**を照合。ZIP全11ファイル、元Web資産9件、manifest/feedの版・最低本体版が一致し、本体0.113.0のZIPは先行発行時と不変。配置テンプレートも9資産に対応し、利用者所有の既存deployスクリプトは保持した。
 - 証跡は`.artifacts/history-auto-refresh-20261101/`の入力・完全ログ・`review.json`・`payload-validation.json`・`validation.json`。固定自動更新GUIは`.artifacts/history-page-ui-refresh-mode-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793502081897/`。実NAS、実壁紙、Explorer再起動、実ロック/RDP・関連付けアプリ/実ごみ箱は操作せず、隔離したnative fixtureと一時画像で検証した。
 - 古い成功GUI2件の実行用コピー36管理項目を整理した。論理サイズ1,262,805,368 bytes、保持234ファイルと最新3コピーのhashは前後一致、削除失敗0。結果・画像・設定・manifestと失敗/不明/再利用資料を保護し、フォルダー全体の削除は0。今回追加した自動更新の差分は未コミットで、push・Release・実利用deployは行っていない。
 
@@ -230,7 +244,7 @@
 - main/cd9ca40のclean状態でpull --ff-onlyを実行し、更新なしを確認して着手。履歴の新しい画像APIがごみ箱専用だったため、NAS画像の削除が失敗していた。登録結果の削除方式に応じ、ローカルは「ごみ箱へ移す」、ネットワークはWindowsのごみ箱へ入らず復元できない可能性を明示した「削除する」とした。キャンセル、対象固定、確認消費、失敗時の元画像/履歴保持、成功後の全モニター反映を維持する。
 - `sourceImages.delete`を使うため最低本体版を0.113.0へ上げ、共通ルールに従って0.8.0→0.9.0へマイナー更新。nativeは版以外を変更せず、メモリ描画・履歴パスの公開・設定・停止は従来どおり。ごみ箱失敗から直接削除へ自動で切り替えない。仕様は本体`docs/memory-storage.md`と本repo`docs/history-page-design.md`。
 - Release buildは警告/エラー0、native回帰と公開EXE/RPCが終了0。共通APIのネットワーク判定/ローカル保護と壁紙JSを含む関連94件がfail/skip 0。ソースと発行済み固定EXEの両方で通常/NASの履歴GUI各11群が成功し、NAS確認文、キャンセル、アクセス拒否時保持・非再送、再確認後の削除、既存の表示・操作・保存・解放を確認した。ネットワーク実体の解決は専用一時画像で模擬し、実NASや利用中の画像には接続・操作していない。
-- publish.batは終了0。40.ARTIFACTへ0.9.0を発行し、EXE **51761126 bytes / SHA256 `fd4205377b46733e4ca3253034b8e653f7ef95cd83de77803f3333519314e863`**、ZIP **46338686 bytes / SHA256 `bdc4b74c0391910512fe576ef2c545694ff5b7685e09a356c85172d836083dda`**、manifest/feedの版・最低本体版、ZIP全10ファイル・元Web資産8件が一致した。ギャラリーの版情報を0.113.0へ同期し、JS/CSS本体は不変。
+- publish.batは終了0。<PUBLISH_ROOT>へ0.9.0を発行し、EXE **51761126 bytes / SHA256 `fd4205377b46733e4ca3253034b8e653f7ef95cd83de77803f3333519314e863`**、ZIP **46338686 bytes / SHA256 `bdc4b74c0391910512fe576ef2c545694ff5b7685e09a356c85172d836083dda`**、manifest/feedの版・最低本体版、ZIP全10ファイル・元Web資産8件が一致した。ギャラリーの版情報を0.113.0へ同期し、JS/CSS本体は不変。
 - 正本は`../AppDock.at365/.artifacts/wallpaper-network-delete-20261101/`の入力/完全ログ/レビュー/配布照合/最終validationとcleanup。固定NAS GUIは`.artifacts/history-page-ui-network-delete-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793499006538/`。古い成功GUIの実行用コピーだけを整理し、結果・画像・設定・最新コピー・再利用資料を保持した。実壁紙・Explorer再起動・実ロック/RDP・実ごみ箱/関連付けアプリ、コミット・push・Release・実利用先deployは行っていない。
 
 ## 2026-10-31: 履歴メモリ化のコミット前照合
@@ -246,7 +260,7 @@
 - 発行前レビューで、読込失敗時の旧画像残留、閉じた後の遅延decode、公開途中の世代変更、索引保存の受付不明、重複画像の情報表示を確認・修正し、関連回帰が成功。拒否された索引は旧値を維持し、受付不明の区間は次の保存成功まで保持する。削除は対象を固定して1回だけ送り、通知失敗による自動再送をしない。
 - Release buildは警告・エラー0、native回帰とRPC fixtureが終了0。パスのメモリ公開、削除の全モニター反映、旧区間回収、索引の拒否/受付不明後の復旧、設定の拒否/復元と正常終了が成功。400文字超のパス1,000件も区間のRPC上限・並び順・回収を確認した。JSの保存と画像寿命4件を含む本体との関連**71/71、失敗・skip 0**。
 - ソース・発行済み固定EXEそれぞれの履歴GUI**11群**が成功。画像キャッシュ非生成、読めない元画像の非表示と旧画像除去、Windowを閉じた後のURL解放と再取得、カード幅のView再生成/Applet再起動での復元、モニター/ページ位置、プレビュー/確認/フォーカス、設定8項目、明暗/狭幅、表示先往復、停止時回収を確認した。発行EXEの不正設定拒否・共通ログ・自身のHWNDへのquery/cancel/end・正常終了も成功した。
-- publish.batは終了0。`A:\40.ARTIFACT\Applet.WallpaperSlideshow.at365`へ0.8.0を発行し、EXE **51761131 bytes / SHA256 `249acbfdab818ef47d7d402af0b3ca379476265c85f7a69b9bc56866c79c37aa`**、manifest/feedの版・最低本体版を照合。update.zip **46338490 bytes / SHA256 `d49258512152a674c1aae94fa10b8025557d1ce3231cfb40ef597f745a8f6f1e`**、ZIP全10ファイルと発行先、元Web資産8件が一致した。既存の利用者所有deployスクリプトは保持した。
+- publish.batは終了0。`<PUBLISH_ROOT>\Applet.WallpaperSlideshow.at365`へ0.8.0を発行し、EXE **51761131 bytes / SHA256 `249acbfdab818ef47d7d402af0b3ca379476265c85f7a69b9bc56866c79c37aa`**、manifest/feedの版・最低本体版を照合。update.zip **46338490 bytes / SHA256 `d49258512152a674c1aae94fa10b8025557d1ce3231cfb40ef597f745a8f6f1e`**、ZIP全10ファイルと発行先、元Web資産8件が一致した。既存の利用者所有deployスクリプトは保持した。
 - 証跡の正本は`../AppDock.at365/.artifacts/wallpaper-memory-history-20261031/`の入力・完全ログ・レビュー・配布照合・最終validation。固定GUIは`.artifacts/history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1793454048931/`。外部操作は隔離fixtureで、実壁紙・Explorer再起動・実ロック/RDP・実際のごみ箱/関連付けアプリは未実施。既存の利用者キャッシュは自動削除していない。
 - 整理は古い成功GUIのEXE5個だけを除去し、最新同方式のコピー、結果/画像/設定/manifestと失敗・方式不明・再利用記録を保持した。共通の削除前検査と保持hash照合は本体の`cleanup.json`を参照。フォルダー全体の削除・コミット・push・Release・実利用先deployは行っていない。
 
@@ -271,7 +285,7 @@
 ## 2026-10-29: Applet情報のアイコンとキャッチコピー 0.7.6
 
 - main/追跡先とcleanを確認し、通常環境のpull --ff-only後に、manifestの任意表示情報 `icon: image` と `tagline: お気に入りの景色を、デスクトップに。` を設定。設定・コマンド・保存・権限・最低本体版は変更せず、0.7.5→0.7.6のパッチ更新として関連する版の正本を揃えた。発行前にmetadataと版の差分をレビューし、阻害事項なし。
-- 標準publish.batで40.ARTIFACTへ発行。配置manifest/ZIP内manifest/feedのID・版・icon/tagline、ZIPのサイズ/SHA256を照合し成功。native/.NETはProductVersionも一致。本体0.101.6の固定EXEへ発行物をコピーし、停止状態で情報パネルの表示を確認した。通常のApplet起動や外部サービス・実入力は実行していない。
+- 標準publish.batで<PUBLISH_ROOT>へ発行。配置manifest/ZIP内manifest/feedのID・版・icon/tagline、ZIPのサイズ/SHA256を照合し成功。native/.NETはProductVersionも一致。本体0.101.6の固定EXEへ発行物をコピーし、停止状態で情報パネルの表示を確認した。通常のApplet起動や外部サービス・実入力は実行していない。
 - 標準発行の共通ギャラリー同期で生成JS/CSS/manifestを0.101.6へ更新。元ソース/出力hashを検証し、共通ギャラリー21件と発行済みWeb資産を使う専用native履歴GUI9群が成功。デスクトップや実利用画像を操作せず、生成差分もレビューした。
 - 共通の入力・完全ログ・配布照合は`../AppDock.at365/.artifacts/applet-branding-20261029/`、本体の`VERIFICATION.md`、本repoの`.artifacts/applet-branding-20261029/validation.json`を参照。機能別の標準全回帰は今回実行せず、表示情報と配布の影響に必要な範囲を検証した。既存の再利用資料を保持し、今回の整理による削除なし。コミット/プッシュ/Release/実利用deployは行っていない。
 
@@ -301,7 +315,7 @@
 - 既存のdisplayName変更を確認。表示名はWallpaperSlideshow、内部name／id／entry・設定・公開APIは保持。開始時はmainで未コミット変更があったため、自動pull／stashは行わず既存差分を保持した。通常修正としてパッチ番号を1つ更新。
 - 発行前にmanifest／版／発行スクリプトと影響先をレビューし、阻害指摘なし。レビュー記録は.artifacts/displayname-publish-20261026/review.json。
 - 既存回帰9群、test-protocol.cjsのRPC fixture 8群と発行EXEの不正設定拒否／共通ログ／専用HWND／正常終了が成功。実デスクトップへ接続せず確認。既存のギャラリー生成元0.94.3の差分を保持し、publish時にも同梱hash一致。
-- publish.batは終了コード0。40.ARTIFACTの配布manifest／実行ファイル／update.jsonの版、ZIPの全エントリー・サイズ・SHA256と配布フォルダーの一致を確認。package-result.jsonに記録。既存deploy関連ファイルを保持。
+- publish.batは終了コード0。<PUBLISH_ROOT>の配布manifest／実行ファイル／update.jsonの版、ZIPの全エントリー・サイズ・SHA256と配布フォルダーの一致を確認。package-result.jsonに記録。既存deploy関連ファイルを保持。
 - 固定の発行済みAppDock 0.94.4へ4つの発行物をそのままコピーし、コピーhash一致、snapshotの内部名／表示名／版と管理画面の4行を確認。Watch／WebBrowserTools／WindowsToolsの起動・停止、ホストの終了コード0を確認。共通証跡は../Applet.WebBrowserTools.at365/.artifacts/displayname-publish-20261026/のpublished-smoke.cjs、smoke-result.json、displaynames.png、host-inputs.json。参照ソースはAppDock main 0.94.3で、固定EXEは0.94.4。
 - 各repoの同名.artifactsフォルダーへ入力hash、コマンド／終了コード、完全ログとそのhashを保存。検証後の製品入力は一致。使用方法と設計の版表記のみの文書修正は製品試験へ影響しない。ホスト全回帰／旧GUI全回帰／実ブラウザーや物理入力は変更範囲外として未実施。
 - 整理は各.artifacts直下を列挙してcleanup.jsonへ記録。今回の試験は同じ方式の成功1回として保持。他の古い資料は参照・実行方式・所有が確定しないため保持、削除0件。隔離ホストとAppletは終了済み。commit／push／Release／実利用deployなし。
