@@ -39,7 +39,7 @@ EXE・manifestと`web/history.html`・`history.js`・`history-preferences.js`・
 
 発行後の履歴GUIには`--published-assets --long-cache`を付け、発行先のweb一式を隔離したnative fixtureへコピーして検証します。カードサイズの独立保存、View再生成とApplet再起動での復元、共有設定の不変、画像キャッシュファイルが作られないこと、閉じたときのBlob URL解放、元画像の移動・読取失敗を確認します。`--settings-navigation-only`は設定ボタンと実パレットからの共通設定コマンド実行、戻る/進む各1回、View保持、非表示時の画像と世代保持の解放、設定の不変を確認します。同じ検査を通常GUIにも含めます。`scripts/test-history-modules.cjs`は保存失敗・明示再試行・不正幅・破損／未知版の非上書きと、閉じた後の遅延decodeの解放を検査します。
 
-表示サイズは`storage` capabilityを宣言してホストStorageの端末別scope・`gallery-view`キーへJSから保存します。schemaVersion 1とcardWidth、任意のautoRefreshを持ち、180〜360 CSS px、20px刻み、初期260pxです。初回readでは書かず、スライダー確定時だけ保存します。保存は直列、失敗した値は画面に留め、未知版を上書きしません。Settingsや履歴サムネイルの寸法と分離します。履歴はStorageのMemory scopeと元画像参照を使います。現行の連携契約に合わせ、最低ホスト版は0.183.0です。共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
+表示サイズと自動更新は`settings` capabilityを使い、[共通UI状態API](../AppDock.at365/docs/extensions.md#applet-ui-state)の`gallery-view`キーへJSから保存します。保存先は端末別settingsの`uiState.applets["at365.wallpaper-slideshow"]["gallery-view"]`です。schemaVersion 1とcardWidth、任意のautoRefreshを持ち、180〜360 CSS px、20px刻み、初期260px、自動更新OFFです。初回readでは書かず、操作確定時だけrevision付きで直列保存します。失敗した値は画面に留め、次の明示操作では最新値を取得してから保存します。破損・未知版は上書きしません。通常設定の共有／端末別選択、履歴サムネイルの寸法と分離します。旧Storageの値は読込・移行・削除しません。履歴はStorageのMemory scopeと元画像参照を維持します。最低ホスト版は0.248.0です。履歴の共通契約は[メモリStorage](../AppDock.at365/docs/memory-storage.md)を参照してください。
 
 履歴GUIの`--refresh-mode-only`は、自動更新OFFの表示維持とページ送り、更新ボタン、ONへの即時切替と後続更新、OFFでの再固定、View/ホスト再起動後の端末別保存を確認します。通常の履歴GUIは明示的にONへ切り替えた後に従来の操作を確認します。保持中の旧区間はprivateなメモリStorageで共有し、元画像の取得・画像解放・権限は共通APIを使います。
 
@@ -93,13 +93,13 @@ AppDock 0.26.29以降のmanifest `commands[].automation`で公開対象を宣言
 
 ## 設定コマンド
 
-公開設定はmanifestのslideshowEnabled/intervalSecondsで宣言し、slideshowEnabledのon/off/toggleは本体生成を使います。ONで再生、OFFで停止、既定はONです。旧start/stop/toggleとresume alias、独自PauseAsyncを削除。設定画面と公開操作は生成IDを参照します。画像設定の検証より先にsettings.changedのslideshowEnabledを反転してエンジンの手動停止へ反映し、不正な画像設定があっても停止・再開を維持します。最低本体版0.183.0、公開/生成/競合/ログは[共通仕様](../AppDock.at365/docs/automation.md#設定宣言と自動生成コマンド)を参照。RPC試験は更新通知の保存値を実プロセスへ送り、生成コマンドの実行はホストGUIで検証します。
+公開設定はmanifestのslideshowEnabled/intervalSecondsで宣言し、slideshowEnabledのon/off/toggleは本体生成を使います。ONで再生、OFFで停止、既定はONです。旧start/stop/toggleとresume alias、独自PauseAsyncを削除。設定画面と公開操作は生成IDを参照します。画像設定の検証より先にsettings.changedのslideshowEnabledを反転してエンジンの手動停止へ反映し、不正な画像設定があっても停止・再開を維持します。最低本体版0.248.0、公開/生成/競合/ログは[共通仕様](../AppDock.at365/docs/automation.md#設定宣言と自動生成コマンド)を参照。RPC試験は更新通知の保存値を実プロセスへ送り、生成コマンドの実行はホストGUIで検証します。
 
 ## 公開設定
 
 外部公開項目はextension.jsonのsettings[].automationで宣言します。取得とrevision付き更新は[共通操作API](../AppDock.at365/docs/automation.md)を使い、Applet固有のAPIや本体側の許可一覧は追加しません。booleanのON/OFF/toggleはgenerateCommandsで明示生成します。設定反映は既存Settings.OnChangedを共用します。
 
-GUI試験にscripts/settings-mcp-check.cjsによる隔離MCP確認を含みます。公開schema・読取り・更新、非公開項目/不正値の拒否、書込許可、dryRun、古いrevisionの拒否と、各Applet実プロセスへの反映を確認します。実利用Codex設定やモデルは使用しません。
+GUI試験にscripts/settings-api-check.cjsによる隔離Applet共通API確認を含みます。公開schema・読取り・更新、非公開項目/不正値の拒否、dryRun、古いrevisionの拒否と、各Applet実プロセスへの反映を確認します。設定操作のMCP公開と旧MCP書込許可スイッチは廃止済みのため検査しません。実利用Codex設定やモデルは使用しません。
 
 ## 設定画面の構成
 
@@ -117,4 +117,4 @@ GUI試験のAppDockは[共通実行場所](../AppDock.at365/docs/testing.md#固�
 
 ## 現行の連携契約
 
-本体0.183.0以上とSDK/Runtime 0.34.0を基準にする。旧パネルへの状態送信は行わず、画面・設定・コマンド・ログは各機能の現行APIへ接続する。コマンドID・設定キー・保存値を保持する。旧パネルを前提としたテストは、実画面・公開コマンド・保存・停止の検証へ置き換える。
+本体0.248.0以上とSDK 0.37.0 / Runtime 0.38.0を基準にする。旧パネルへの状態送信は行わず、画面・設定・コマンド・ログは各機能の現行APIへ接続する。コマンドID・設定キー・保存値を保持する。旧パネルを前提としたテストは、実画面・公開コマンド・保存・停止の検証へ置き換える。

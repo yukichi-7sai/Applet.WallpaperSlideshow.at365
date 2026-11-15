@@ -79,18 +79,22 @@ test("failed images remain navigable and a one-image monitor has no neighbours",
   assert.notEqual(navigation.selected.id, items[0].id);
 });
 
-test("history card size retains explicit save, retry, device scope and corrupt-data protection", async () => {
+test("history card size retains explicit save, retry, UI state revisions and corrupt-data protection", async () => {
   const { HistoryPreferences } = await moduleAt("history-preferences.js");
   let saved = null,
     fail = false;
   const calls = [];
   const preferences = new HistoryPreferences(async (operation, input) => {
     calls.push({ operation, input });
-    assert.equal(input.scope, "device");
+    assert.equal(input.scope, undefined);
     assert.equal(input.key, "gallery-view");
-    if (operation === "storage.get") return saved;
+    if (operation === "uiState.get")
+      return { value: saved, revision: "current" };
+    assert.equal(operation, "uiState.set");
+    assert.equal(input.expectedRevision, "current");
     if (fail) throw Error("disk unavailable");
     saved = input.value;
+    return { revision: "current" };
   });
   assert.deepEqual(await preferences.read(), {
     cardWidth: 260,
@@ -113,15 +117,21 @@ test("history card size retains explicit save, retry, device scope and corrupt-d
   assert.equal(preferences.error, "");
   await preferences.save(320, true);
   assert.equal(saved.autoRefresh, true);
-  const restored = new HistoryPreferences(async () => saved);
+  const restored = new HistoryPreferences(async () => ({
+    value: saved,
+    revision: "current",
+  }));
   assert.deepEqual(await restored.read(), {
     cardWidth: 320,
     autoRefresh: true,
     error: "",
   });
   const legacy = new HistoryPreferences(async () => ({
-    schemaVersion: 1,
-    cardWidth: 300,
+    value: {
+      schemaVersion: 1,
+      cardWidth: 300,
+    },
+    revision: "current",
   }));
   assert.deepEqual(await legacy.read(), {
     cardWidth: 300,
@@ -139,13 +149,41 @@ test("history card size retains explicit save, retry, device scope and corrupt-d
   ]) {
     let writes = 0;
     const corrupt = new HistoryPreferences(async (operation) => {
-      if (operation === "storage.set") writes++;
-      return data;
+      if (operation === "uiState.set") writes++;
+      return { value: data, revision: "current" };
     });
     assert.match((await corrupt.read()).error, /読み取れません/);
     await assert.rejects(corrupt.save(260));
     assert.equal(writes, 0);
   }
+});
+
+test("a stale UI state write waits for explicit retry and rereads the current revision", async () => {
+  const { HistoryPreferences } = await moduleAt("history-preferences.js");
+  let value = { schemaVersion: 1, cardWidth: 300, autoRefresh: false };
+  let revision = "first", reads = 0, writes = 0;
+  const preferences = new HistoryPreferences(async (operation, input) => {
+    if (operation === "uiState.get") {
+      reads++;
+      return { value: structuredClone(value), revision };
+    }
+    writes++;
+    if (input.expectedRevision !== revision) throw Error("conflict");
+    value = input.value;
+    revision = "saved";
+    return { revision };
+  });
+  await preferences.read();
+  value = { schemaVersion: 1, cardWidth: 320, autoRefresh: true };
+  revision = "external";
+  await assert.rejects(preferences.save(340), /保存できません/);
+  assert.equal(writes, 1);
+  assert.equal(value.cardWidth, 320);
+  assert.equal(reads, 1);
+  await preferences.save(340);
+  assert.equal(reads, 2);
+  assert.equal(value.cardWidth, 340);
+  assert.equal(value.autoRefresh, true, "unmodified field retains the external value");
 });
 
 function snapshotStorage() {
@@ -310,9 +348,11 @@ test("toggling automatic refresh before preferences load preserves the saved car
   const { HistoryPreferences } = await moduleAt("history-preferences.js");
   let saved = { schemaVersion: 1, cardWidth: 340 };
   const preferences = new HistoryPreferences(async (operation, input) => {
-    assert.equal(input.scope, "device");
-    if (operation === "storage.get") return saved;
+    assert.equal(input.scope, undefined);
+    if (operation === "uiState.get")
+      return { value: saved, revision: "current" };
     saved = input.value;
+    return { revision: "current" };
   });
   await preferences.save(undefined, true);
   assert.deepEqual(saved, {
@@ -332,12 +372,16 @@ test("initial preference reads are shared when a toggle is saved during loading"
     release = resolve;
   });
   const preferences = new HistoryPreferences(async (operation, input) => {
-    if (operation === "storage.get") {
+    if (operation === "uiState.get") {
       reads++;
       await barrier;
-      return { schemaVersion: 1, cardWidth: 340 };
+      return {
+        value: { schemaVersion: 1, cardWidth: 340 },
+        revision: "current",
+      };
     }
     saved = input.value;
+    return { revision: "current" };
   });
   const read = preferences.read();
   const save = preferences.save(undefined, true);

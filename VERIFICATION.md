@@ -1,5 +1,14 @@
 # 検証記録
 
+## 2026-11-16 履歴UI設定を端末別settingsへ統一（0.16.0）
+
+- カードサイズ`cardWidth`と自動更新`autoRefresh`を、共通`uiState.get/set`で端末別settingsの`uiState.applets["at365.wallpaper-slideshow"]["gallery-view"]`へ保存するよう変更した。通常の共有／端末別設定の選択から独立し、壁紙設定の再適用を発生させない。履歴本文・ページ位置・画像参照は既存Memory Storageを維持する。旧`gallery-view.json`の読込・移行・削除は行わず、初期値は260px・自動更新OFF。
+- 取得したrevisionで保存し、失敗値は画面に保持する。明示再試行では最新値を読み、未変更項目を保持して保存する。破損・未知版の上書き拒否、遅延読込と保存の直列化を維持した。発行前に本体APIと保存境界・既存操作・必要回帰・版をレビューし、阻害事項なし。保存先変更と最低本体版引上げのため0.15.0→0.16.0、最低本体0.248.0とした。
+- Release build、fake表示先を使う.NET標準回帰、`test-protocol.cjs`の既存RPCと発行native起動smoke、`test-history-modules.cjs` 15件が成功。最終固定本体0.248.0と`--published-assets --long-cache`の履歴GUI 20群、`--published-assets --refresh-mode-only` 7群が成功した。新しい端末JSONへの実保存、旧Storageの非読込・保持、View/Applet/ホスト再起動後の復元、既存プレビュー・設定往復・画像解放も確認した。実ユーザーの壁紙・画像・Explorer/NAS・ごみ箱は操作しないfixture試験。
+- 初回の履歴GUIは既存`settings-mcp-check.cjs`が廃止済みのMCP許可操作・設定ツールを前提にして停止した。`settings-api-check.cjs`へ置換し、隔離Node Appletから現在の共通APIを呼ぶ試験へ修正。schema/値、dryRun、非公開/不正値、古いrevision、生成コマンド、native反映、監査ログの検査は維持し、廃止したMCP公開と可変の書込許可検査だけを除いた。失敗profileを保持して全GUIを再実行し成功した。変更は試験と開発文書だけで、発行済み製品の追加修正・版更新・再発行は不要。
+- `publish.bat`は終了0。`<PUBLISH_ROOT>/Applet.WallpaperSlideshow.at365`のEXE・manifest・feedは0.16.0、最低本体0.248.0。ZIPの11ファイルと発行先がhash一致し、web資産も元ソースと一致。EXE SHA256=`5db27ad088f44f2f03c544c7b3519987e0c6760c659fb33e62780067b6d64eeb`、ZIP SHA256=`ccbdce723133e13f4add2a071b5dcdf12a42d234c1d0a0de7d9dcfce72881231`、208,947 bytes。
+- 証跡は`.artifacts/applet-ui-state-20261116/`、共通API側は`../AppDock.at365/.artifacts/applet-ui-state-20261116/`、コミット照合は`.artifacts/commit-validation-applet-ui-state-20261116/`。成功GUIは`history-page-ui-long-cache-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-1794759215381`と`history-page-ui-refresh-mode-1794759289380`。全試験終了を確認し、本repoの3profileに複製した実行物42件を回収した。結果・画像・ログ、発行元、共用ランタイム、固定build出力は保持。通常フォルダーは方式別3成功未満、既存分は状態不明のため削除0件。ローカルコミットまでを対象とし、push・Release・実利用先deployは行わない。
+
 ## 2026-11-14 コミット前の照合
 
 - 実装完了時に記録した134入力ファイルのSHA256が一致し、別作業の変更と既存stageがないことを確認。

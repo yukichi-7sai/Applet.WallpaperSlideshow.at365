@@ -7,6 +7,8 @@ export class HistoryPreferences {
     this.loaded = false;
     this.reading = null;
     this.blocked = false;
+    this.revision = null;
+    this.refreshBeforeSave = false;
   }
   static valid(value) {
     return (
@@ -20,10 +22,11 @@ export class HistoryPreferences {
     if (!this.loaded) {
       this.reading ??= (async () => {
         try {
-          const value = await this.call("storage.get", {
+          const snapshot = await this.call("uiState.get", {
             key: "gallery-view",
-            scope: "device",
           });
+          if (!snapshot || typeof snapshot.revision !== "string") throw Error();
+          const value = snapshot.value;
           if (value != null) {
             if (
               typeof value !== "object" ||
@@ -38,9 +41,10 @@ export class HistoryPreferences {
                 typeof value.autoRefresh !== "boolean")
             )
               throw Error();
-            this.width = value.cardWidth;
-            this.autoRefresh = value.autoRefresh ?? false;
           }
+          this.width = value?.cardWidth ?? 260;
+          this.autoRefresh = value?.autoRefresh ?? false;
+          this.revision = snapshot.revision;
         } catch {
           this.blocked = true;
           this.error =
@@ -57,6 +61,11 @@ export class HistoryPreferences {
     };
   }
   async save(width, autoRefresh) {
+    if (this.refreshBeforeSave) {
+      this.loaded = false;
+      this.reading = null;
+      this.refreshBeforeSave = false;
+    }
     await this.read();
     if (width === undefined) width = this.width;
     if (autoRefresh === undefined) autoRefresh = this.autoRefresh;
@@ -66,15 +75,17 @@ export class HistoryPreferences {
       throw Error("自動更新の設定を確認してください。");
     if (this.blocked) throw Error(this.error);
     try {
-      await this.call("storage.set", {
+      const saved = await this.call("uiState.set", {
         key: "gallery-view",
-        scope: "device",
+        expectedRevision: this.revision,
         value: { schemaVersion: 1, cardWidth: width, autoRefresh },
       });
+      this.revision = saved.revision;
       this.width = width;
       this.autoRefresh = autoRefresh;
       this.error = "";
     } catch {
+      this.refreshBeforeSave = true;
       this.error =
         "履歴ページの設定を保存できませんでした。保存先を確認して再試行してください。";
       throw Error(this.error);

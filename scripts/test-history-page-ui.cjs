@@ -56,6 +56,21 @@ fs.writeFileSync(
   path.join(extension, "extension.json"),
   JSON.stringify(manifest),
 );
+const oldPreferenceFile = path.join(
+  profile,
+  "data/storage",
+  manifest.id,
+  "devices",
+  require("node:os").hostname(),
+  "gallery-view.json",
+);
+fs.mkdirSync(path.dirname(oldPreferenceFile), { recursive: true });
+const oldPreference = JSON.stringify({
+  schemaVersion: 1,
+  cardWidth: 180,
+  autoRefresh: true,
+});
+fs.writeFileSync(oldPreferenceFile, oldPreference);
 const settings = require(
   path.join(host, "out/main/shared/settings-schema"),
 ).createDefaultSettings();
@@ -85,6 +100,7 @@ settings.keybindings.push({
   global: false,
   when: { scope: "app", appletIds: [] },
 });
+require("./settings-api-check.cjs").prepare({ profile, settings });
 fs.writeFileSync(
   require(path.join(host, "scripts/test-settings.cjs")).file(profile),
   JSON.stringify(settings),
@@ -360,6 +376,18 @@ const translucentBackdrop = async (selector) => {
       .getByRole("heading", { name: "最近使った壁紙", exact: true })
       .waitFor();
     await ready(7);
+    assert.equal(
+      await ui.getByRole("slider", { name: "画像サイズ" }).inputValue(),
+      "260",
+    );
+    assert.equal(
+      await ui
+        .getByRole("checkbox", { name: "自動更新", exact: true })
+        .isChecked(),
+      false,
+    );
+    assert.equal(fs.readFileSync(oldPreferenceFile, "utf8"), oldPreference);
+    checks.push("old Storage preferences are neither imported nor changed");
     if (settingsNavigation) {
       await require("./settings-navigation-checks.cjs")({
         instance,
@@ -424,10 +452,11 @@ const translucentBackdrop = async (selector) => {
       };
       const preference = () =>
         ui.evaluate(() =>
-          window.appletPage.call("storage.get", {
-            key: "gallery-view",
-            scope: "device",
-          }),
+          window.appletPage
+            .call("uiState.get", {
+              key: "gallery-view",
+            })
+            .then((snapshot) => snapshot.value),
         );
       assert.equal(
         await ui
@@ -658,14 +687,25 @@ const translucentBackdrop = async (selector) => {
       async () =>
         (
           await ui.evaluate(() =>
-            window.appletPage.call("storage.get", {
-              key: "gallery-view",
-              scope: "device",
-            }),
+            window.appletPage
+              .call("uiState.get", {
+                key: "gallery-view",
+              })
+              .then((snapshot) => snapshot.value),
           )
         ).cardWidth === 340,
       "history size persisted",
     );
+    const deviceFile = require(
+      path.join(host, "scripts/test-settings.cjs"),
+    ).deviceFile(profile);
+    assert.equal(
+      JSON.parse(fs.readFileSync(deviceFile)).uiState.applets[manifest.id][
+        "gallery-view"
+      ].cardWidth,
+      340,
+    );
+    assert.equal(fs.readFileSync(oldPreferenceFile, "utf8"), oldPreference);
     assert(await firstCard.evaluate((node) => node === window.retainedCard));
     assert.equal(
       JSON.stringify(
@@ -1228,7 +1268,7 @@ const translucentBackdrop = async (selector) => {
         (binding) => binding.id === "retained-history-previous",
       ),
     );
-    await require("./settings-mcp-check.cjs")({
+    await require("./settings-api-check.cjs")({
       host,
       profile,
       page: main,
@@ -1267,10 +1307,10 @@ const translucentBackdrop = async (selector) => {
               (image) => image.naturalWidth <= 32 && image.naturalHeight <= 24,
             ),
           ),
-      "native thumbnail settings from MCP",
+      "native thumbnail settings from shared API",
     );
     checks.push(
-      "MCP seven settings / invalid and private values rejected / live native thumbnail dimensions",
+      "shared API seven settings / invalid and private values rejected / live native thumbnail dimensions",
     );
     await main.evaluate(
       (id) => window.dock.toggleExtension(id, false),
