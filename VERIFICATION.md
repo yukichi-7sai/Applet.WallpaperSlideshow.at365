@@ -1,5 +1,11 @@
 # 検証記録
 
+## 2026-11-17 公開版索引とRelease（0.16.0）
+
+- 同版のソース・発行済みZIPの全収録ファイル、ID/版/最低本体版、サイズ/SHA256と標準単体回帰を確認。製品コード・版・配布物は変更せず、既存同版のReleaseは再作成しない。
+- 正式Releaseの匿名feed/ZIP取得とタグ固定元の実更新確認が成功。公開版索引を追加し、ZIP取得先を同じrepoの固定タグへ限定した。
+- 公開先は[v0.16.0](https://github.com/yukichi-7sai/Applet.WallpaperSlideshow.at365/releases/tag/v0.16.0)。raw索引の確認と旧Release整理の実行結果は`.artifacts/release-repository-feed-20261117/receipt.json`と同フォルダーの整理結果へ保存する。
+
 ## 2026-11-16 履歴UI設定を端末別settingsへ統一（0.16.0）
 
 - カードサイズ`cardWidth`と自動更新`autoRefresh`を、共通`uiState.get/set`で端末別settingsの`uiState.applets["at365.wallpaper-slideshow"]["gallery-view"]`へ保存するよう変更した。通常の共有／端末別設定の選択から独立し、壁紙設定の再適用を発生させない。履歴本文・ページ位置・画像参照は既存Memory Storageを維持する。旧`gallery-view.json`の読込・移行・削除は行わず、初期値は260px・自動更新OFF。
