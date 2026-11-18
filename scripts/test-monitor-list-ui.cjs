@@ -149,7 +149,9 @@ const edit = number => page.getByRole('button', { name: `モニター${number}�
       await dialog().getByLabel('画像ソースフォルダー 2', { exact: true }).fill('C:/Example/Chosen');
     }
     await dialog().getByLabel('タイル枚数', { exact: true }).fill('0');
-    await ok(); await dialog().getByRole('alert').waitFor();
+    await ok();
+    await dialog().locator('.input-validation-popover:popover-open').waitFor();
+    assert.equal(await tileCount().getAttribute('aria-invalid'), 'true');
     assert.equal((await own()).monitors, legacy);
     await dialog().getByLabel('タイル枚数', { exact: true }).fill('13');
     await tileMargin().fill('24');
@@ -182,15 +184,16 @@ const edit = number => page.getByRole('button', { name: `モニター${number}�
     await dialog().getByLabel('画像ソースフォルダー 1', { exact: true }).fill('C:/Example/New');
     await dialog().getByLabel('下のPadding（px）', { exact: true }).fill('9');
     await ok(); await until(async () => (await own()).monitors.length === 3, 'add');
+    const ordering = page.locator('.settings-inline-order');
     const openOrder = () => page.getByRole('button', { name: 'モニターごとの画像設定を並べ替え', exact: true }).click();
     await openOrder();
-    await dialog().getByTestId('settings-order-handle:2').press('ArrowUp');
+    await ordering.getByTestId('settings-order-handle:2').press('ArrowUp');
     assert.equal((await own()).monitors[2].PaddingBottom, 9);
-    await cancel();
+    await ordering.getByTestId('settings-order-cancel').click();
     await openOrder();
-    await dialog().getByTestId('settings-order-handle:2').press('ArrowUp');
-    await dialog().screenshot({ path: path.join(profile, 'monitor-order.png') });
-    await ok(); await until(async () => (await own()).monitors[1].PaddingBottom === 9, 'order');
+    await ordering.getByTestId('settings-order-handle:2').press('ArrowUp');
+    await ordering.screenshot({ path: path.join(profile, 'monitor-order.png') });
+    await ordering.getByTestId('settings-order-apply').click(); await until(async () => (await own()).monitors[1].PaddingBottom === 9, 'order');
     await page.getByRole('button', { name: 'モニター2を削除', exact: true }).click();
     await cancel(); assert.equal((await own()).monitors.length, 3);
     await page.getByRole('button', { name: 'モニター2を削除', exact: true }).click();
